@@ -1,30 +1,22 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useState } from "react";
 import type { NearbyStore } from "@/lib/queries";
 import { StoreMap, type MapFocus } from "./StoreMap";
 
 const RADII = [10, 25, 50, 100] as const;
 
 const INPUT_CLASSES =
-  "rounded-lg border border-slate-300 bg-white px-3 py-2 text-sm text-slate-900 placeholder:text-slate-400 focus:border-sky-500 focus:outline-none dark:border-slate-700 dark:bg-slate-900 dark:text-slate-100 dark:placeholder:text-slate-500";
+  "rounded-lg border border-slate-300 bg-white px-3 py-2 text-sm text-slate-900 placeholder:text-slate-400 focus:border-sky-500 focus:outline-none focus:ring-2 focus:ring-sky-500/30 dark:border-slate-700 dark:bg-slate-900 dark:text-slate-100 dark:placeholder:text-slate-500";
 
 export function StoreFinder() {
   const [zip, setZip] = useState("");
   const [radius, setRadius] = useState<number>(50);
   const [stores, setStores] = useState<NearbyStore[]>([]);
   const [focus, setFocus] = useState<MapFocus | null>(null);
-  const [searched, setSearched] = useState(false);
+  const [mode, setMode] = useState<"none" | "search" | "all">("none");
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
-
-  // initial load: every store on the map
-  useEffect(() => {
-    fetch("/api/stores")
-      .then((r) => r.json())
-      .then((d) => setStores(d.stores ?? []))
-      .catch(() => {});
-  }, []);
 
   async function search(e: React.FormEvent) {
     e.preventDefault();
@@ -40,7 +32,7 @@ export function StoreFinder() {
       const d = await res.json();
       setStores(d.stores);
       setFocus(d.center ? { center: d.center, radiusKm: d.radiusKm } : null);
-      setSearched(true);
+      setMode("search");
     } catch {
       setError("Suche fehlgeschlagen — bitte später nochmal versuchen.");
     } finally {
@@ -48,13 +40,17 @@ export function StoreFinder() {
     }
   }
 
-  async function resetSearch() {
-    setSearched(false);
-    setFocus(null);
-    setZip("");
+  async function showAll() {
+    setLoading(true);
     setError(null);
-    const d = await fetch("/api/stores").then((r) => r.json());
-    setStores(d.stores ?? []);
+    try {
+      const d = await fetch("/api/stores").then((r) => r.json());
+      setStores(d.stores ?? []);
+      setFocus(null);
+      setMode("all");
+    } finally {
+      setLoading(false);
+    }
   }
 
   const inStockCount = stores.filter((s) => s.inStock).length;
@@ -68,6 +64,8 @@ export function StoreFinder() {
           inputMode="numeric"
           placeholder="PLZ, z. B. 1010"
           aria-label="Postleitzahl"
+          aria-invalid={error ? true : undefined}
+          aria-describedby={error ? "plz-error" : undefined}
           className={`w-32 ${INPUT_CLASSES}`}
         />
         <select
@@ -89,36 +87,41 @@ export function StoreFinder() {
         >
           {loading ? "Suche…" : "Filialen suchen"}
         </button>
-        {searched && (
+        {mode === "none" && (
           <button
             type="button"
-            onClick={resetSearch}
-            className="text-sm text-slate-500 underline hover:text-slate-700 dark:text-slate-400 dark:hover:text-slate-200"
+            onClick={showAll}
+            className="text-sm text-sky-700 underline hover:text-sky-800 dark:text-sky-400 dark:hover:text-sky-300"
           >
-            Alle anzeigen
+            oder alle auf der Karte zeigen
           </button>
         )}
       </form>
-      {error && <p className="mt-2 text-sm text-red-600 dark:text-red-400">{error}</p>}
-
-      <div className="mt-4">
-        <StoreMap stores={stores} focus={focus} />
-        <p className="mt-2 text-xs text-slate-400 dark:text-slate-500">
-          {stores.length} Filialen
-          {inStockCount > 0 ? (
-            <span className="font-medium text-green-700 dark:text-green-400">
-              {" "}
-              — {inStockCount} davon lagernd 🟢
-            </span>
-          ) : (
-            " — derzeit keine lagernd"
-          )}
-          . Filialdaten derzeit von OBI; BAUHAUS &amp; MediaMarkt geben keine Filialdaten für
-          Server frei.
+      {error && (
+        <p id="plz-error" className="mt-2 text-sm text-red-600 dark:text-red-400">
+          {error}
         </p>
-      </div>
+      )}
 
-      {searched && (
+      {mode !== "none" && (
+        <div className="mt-4">
+          <StoreMap stores={stores} focus={focus} />
+          <p className="mt-2 text-xs text-slate-400 dark:text-slate-500">
+            {stores.length} Filialen
+            {inStockCount > 0 ? (
+              <span className="font-medium text-green-700 dark:text-green-400">
+                {" "}
+                — {inStockCount} davon lagernd 🟢
+              </span>
+            ) : (
+              " — derzeit keine lagernd"
+            )}
+            . Filialdaten von OBI; BAUHAUS &amp; MediaMarkt geben keine Filialdaten für Server frei.
+          </p>
+        </div>
+      )}
+
+      {mode === "search" && (
         <div className="mt-4">
           {stores.length === 0 ? (
             <p className="text-sm text-slate-500 dark:text-slate-400">

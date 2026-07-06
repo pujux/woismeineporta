@@ -194,76 +194,79 @@ export function SubscribePanel() {
         )}
       </details>
 
-      <div className="mt-5 flex flex-col gap-3 sm:flex-row sm:items-start">
-        <div className="flex-1">
-          {pushState === "subscribed" ? (
-            <div className="text-sm">
-              <span className="font-medium text-green-700 dark:text-green-400">
-                Push-Alarm aktiv ✓
-              </span>
-              <button
-                onClick={disablePush}
-                className="ml-3 text-slate-500 underline hover:text-slate-700 dark:text-slate-400 dark:hover:text-slate-200"
-              >
-                Deaktivieren
-              </button>
-            </div>
-          ) : pushState === "denied" ? (
-            <p className="text-sm text-slate-500 dark:text-slate-400">
-              Push ist in deinem Browser blockiert — erlaube Benachrichtigungen in den
-              Website-Einstellungen.
-            </p>
-          ) : pushState === "unsupported" ? (
-            <p className="text-sm text-slate-500 dark:text-slate-400">
-              Dein Browser unterstützt keine Push-Benachrichtigungen.
-            </p>
-          ) : (
+      <div className="mt-5">
+        {/* Primary path: Web Push */}
+        {pushState === "subscribed" ? (
+          <div className="text-sm">
+            <span className="font-medium text-green-700 dark:text-green-400">Push-Alarm aktiv ✓</span>
             <button
-              onClick={enablePush}
-              disabled={pushState === "loading"}
-              className="w-full rounded-lg bg-sky-600 px-4 py-2 text-sm font-semibold text-white shadow-sm transition hover:bg-sky-500 disabled:opacity-50 sm:w-auto"
+              onClick={disablePush}
+              className="ml-3 text-slate-500 underline hover:text-slate-700 dark:text-slate-400 dark:hover:text-slate-200"
             >
-              {pushState === "loading" ? "…" : "🔔 Push-Alarm aktivieren"}
+              Deaktivieren
             </button>
-          )}
-          {pushError && <p className="mt-1 text-xs text-red-600 dark:text-red-400">{pushError}</p>}
-          {isIos && !isStandalone && pushState !== "subscribed" && (
-            <p className="mt-1 text-xs text-slate-500 dark:text-slate-400">
-              iPhone/iPad: Zuerst über „Teilen → Zum Home-Bildschirm" installieren, dann Push
-              aktivieren.
-            </p>
-          )}
-        </div>
+          </div>
+        ) : pushState === "denied" ? (
+          <p className="text-sm text-slate-500 dark:text-slate-400">
+            Push ist in deinem Browser blockiert — erlaube Benachrichtigungen in den
+            Website-Einstellungen.
+          </p>
+        ) : pushState === "unsupported" ? (
+          <p className="text-sm text-slate-500 dark:text-slate-400">
+            Dein Browser unterstützt keine Push-Benachrichtigungen — nutz den E-Mail-Alarm unten.
+          </p>
+        ) : (
+          <button
+            onClick={enablePush}
+            disabled={pushState === "loading"}
+            className="w-full rounded-lg bg-sky-600 px-4 py-2.5 text-sm font-semibold text-white shadow-sm transition hover:bg-sky-500 disabled:opacity-50"
+          >
+            {pushState === "loading" ? "…" : "🔔 Push-Alarm aktivieren"}
+          </button>
+        )}
+        {pushError && <p className="mt-1 text-xs text-red-600 dark:text-red-400">{pushError}</p>}
+        {isIos && !isStandalone && pushState !== "subscribed" && (
+          <p className="mt-1.5 text-xs text-slate-500 dark:text-slate-400">
+            iPhone/iPad: Zuerst über „Teilen → Zum Home-Bildschirm" installieren, dann Push
+            aktivieren.
+          </p>
+        )}
 
-        <form onSubmit={subscribeEmail} className="flex flex-1 gap-2">
+        {/* Secondary path: e-mail */}
+        <div className="my-3 flex items-center gap-3 text-xs text-slate-400 dark:text-slate-500">
+          <span className="h-px flex-1 bg-slate-200 dark:bg-slate-800" />
+          oder per E-Mail
+          <span className="h-px flex-1 bg-slate-200 dark:bg-slate-800" />
+        </div>
+        <form onSubmit={subscribeEmail} className="flex gap-2">
           <input
             type="email"
             required
             value={email}
             onChange={(e) => setEmail(e.target.value)}
-            placeholder="oder per E-Mail"
+            placeholder="deine@email.at"
             aria-label="E-Mail-Adresse"
             className={`min-w-0 flex-1 ${INPUT_CLASSES}`}
           />
           <button
             type="submit"
             disabled={emailState === "sending"}
-            className="rounded-lg border border-sky-600 px-3 py-2 text-sm font-semibold text-sky-700 transition hover:bg-sky-100 disabled:opacity-50 dark:border-sky-500 dark:text-sky-400 dark:hover:bg-sky-950"
+            className="rounded-lg border border-slate-300 px-3 py-2 text-sm font-medium text-slate-600 transition hover:bg-slate-100 disabled:opacity-50 dark:border-slate-700 dark:text-slate-300 dark:hover:bg-slate-800"
           >
             {emailState === "sending" ? "…" : "Benachrichtigen"}
           </button>
         </form>
+        {emailState === "sent" && (
+          <p className="mt-2 text-sm text-green-700 dark:text-green-400">
+            Bestätigungs-Mail verschickt — bitte Postfach checken (auch Spam). ✓
+          </p>
+        )}
+        {emailState === "error" && (
+          <p className="mt-2 text-sm text-red-600 dark:text-red-400">
+            Das hat nicht geklappt — E-Mail-Adresse prüfen und nochmal versuchen.
+          </p>
+        )}
       </div>
-      {emailState === "sent" && (
-        <p className="mt-2 text-sm text-green-700 dark:text-green-400">
-          Bestätigungs-Mail verschickt — bitte Postfach checken (auch Spam). ✓
-        </p>
-      )}
-      {emailState === "error" && (
-        <p className="mt-2 text-sm text-red-600 dark:text-red-400">
-          Das hat nicht geklappt — E-Mail-Adresse prüfen und nochmal versuchen.
-        </p>
-      )}
     </div>
   );
 }

@@ -18,7 +18,7 @@ export default async function Home() {
   return (
     <main className="mx-auto max-w-3xl px-4">
       <LiveRefresh />
-      <header className="pt-12 pb-10 text-center">
+      <header className="pt-12 pb-2">
         <div className="mb-4 inline-flex items-center gap-2 rounded-full border border-slate-200 bg-white px-3 py-1 text-xs font-medium text-slate-600 shadow-sm dark:border-slate-800 dark:bg-slate-900 dark:text-slate-300">
           <span className="h-2 w-2 animate-pulse-dot rounded-full bg-sky-500" aria-hidden />
           Live — alle 30 Sekunden geprüft
@@ -30,50 +30,50 @@ export default async function Home() {
           </span>
           ?
         </h1>
-        <p className="mx-auto mt-3 max-w-md text-slate-600 dark:text-slate-400">
+        <p className="mt-3 max-w-xl text-slate-600 dark:text-slate-400">
           {anyInStock
             ? "🎉 Es gibt gerade welche — schnell sein!"
             : "Die Midea PortaSplit ist überall ausverkauft. Wir schauen für dich nach — pausenlos."}
         </p>
       </header>
 
-      <section className="grid gap-8 sm:grid-cols-2">
+      <section className="mt-10 space-y-8">
         {statuses.map(({ variant, offers }) => (
           <div key={variant.slug}>
-            <div className="mb-3 flex items-baseline justify-between">
+            <div className="mb-3 flex items-baseline justify-between border-b border-slate-200 pb-2 dark:border-slate-800">
               <h2 className="text-lg font-semibold">{variant.name}</h2>
               <span className="text-xs text-slate-400 dark:text-slate-500">
                 UVP {formatPrice(variant.uvpCents)}
               </span>
             </div>
-            <div className="space-y-2.5">
-              {offers.length === 0 ? (
-                <p className="rounded-xl border border-dashed border-slate-300 px-4 py-6 text-center text-sm text-slate-400 dark:border-slate-700 dark:text-slate-500">
-                  Noch keine Daten — erster Check läuft.
-                </p>
-              ) : (
-                offers.map((offer) => (
+            {offers.length === 0 ? (
+              <p className="rounded-xl border border-dashed border-slate-300 px-4 py-6 text-center text-sm text-slate-400 dark:border-slate-700 dark:text-slate-500">
+                Noch keine Daten — erster Check läuft.
+              </p>
+            ) : (
+              <div className="grid gap-2.5 sm:grid-cols-2">
+                {offers.map((offer) => (
                   <StatusCard key={offer.retailerSlug} offer={offer} now={now} />
-                ))
-              )}
-            </div>
+                ))}
+              </div>
+            )}
           </div>
         ))}
       </section>
 
-      <section className="mt-14">
+      <section className="mt-12">
         <SubscribePanel />
       </section>
 
-      <section className="mt-14">
-        <h2 className="mb-1 text-lg font-semibold">In welcher Filiale gibt&apos;s eine?</h2>
-        <p className="mb-4 text-sm text-slate-500 dark:text-slate-400">
+      <section className="mt-12">
+        <h2 className="text-lg font-semibold">In welcher Filiale gibt&apos;s eine?</h2>
+        <p className="mb-4 mt-1 text-sm text-slate-500 dark:text-slate-400">
           PLZ eingeben und sehen, welche Märkte in deiner Nähe die PortaSplit lagernd haben.
         </p>
         <StoreFinder />
       </section>
 
-      <section className="mt-14">
+      <section className="mt-12">
         <h2 className="mb-4 text-lg font-semibold">Verlauf</h2>
         <EventFeed events={events} now={now} />
       </section>
