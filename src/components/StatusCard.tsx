@@ -37,7 +37,7 @@ export function StatusCard({
 }) {
   const meta = STATUS_META[offer.status];
   const checked =
-    offer.lastCheckedAt === 0 ? "noch nicht geprüft" : `geprüft ${formatRelativeTime(offer.lastCheckedAt, now)}`;
+    offer.lastCheckedAt === 0 ? "noch nicht geprüft" : `${formatRelativeTime(offer.lastCheckedAt, now)} geprüft`;
 
   return (
     <a
