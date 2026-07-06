@@ -1,61 +1,57 @@
-# Bauhaus Filial-Verfügbarkeit (experimental)
+# Bauhaus Filial-Verfügbarkeit
 
 **Branch:** `feat/bauhaus-filialen`
-**Status:** plumbing complete + tested; token acquisition is the open piece.
+**Status:** ✅ working end-to-end, verified live. No token/browser needed —
+mergeable within the lightweight single-container model.
 
-## Goal
+## Outcome
 
-Add per-store ("Fachcentrum") availability for Bauhaus, matching what
-letzteklima.com shows. Today our Bauhaus adapter is online-status-only because
-the store-level API needs auth.
+Per-store ("Fachcentrum") availability for Bauhaus, matching letzteklima.com —
+but **without** the headless-browser/OAuth machinery we first assumed.
 
-## What we learned (from letzteklima.com + our own probing)
+## The key finding
 
-- letzteklima serves a precomputed `data.json` with **per-store Bauhaus stock**
-  keyed by warehouse id (`bauhaus:758` = Salzburg, etc.), 22–23 AT Fachcentren.
-- The data comes from `api.bauhaus/v1/product-stock/at/products/{productId}/warehouses/{warehouseId}/stock`.
-- That gateway (Apigee) requires an **OAuth bearer token** on every route —
-  the public `apiKey` in the page is rejected (`oauth.v2.InvalidAccessToken`).
-- The token is **minted at runtime by the browser** through a flow behind
-  Cloudflare (the page loads `jwt-decode` and holds an empty `apigeeAccessToken`
-  that gets filled in the reserve/stock flow). Standard Apigee token endpoints
-  refuse the public key, and the reserve flow only fires when a store is
-  selected and stock > 0 — so it can't be captured while everything is sold out.
-- letzteklima almost certainly runs a **persistent/headless browser** to mint
-  and refresh the token, then reuses it for cheap per-warehouse API calls. Their
-  backend is separate from serving, so that operational weight is fine for them.
+`api.bauhaus/v1/product-stock/at/products/{productId}/warehouses/{warehouseId}/stock`
+authenticates with **just the public Apigee `apiKey`** (embedded in the PDP) plus
+an allowed `Origin`/`Referer` — **no OAuth bearer token**. Our earlier 401s were
+simply a missing `Origin` header.
 
-## What this branch implements
+- Live response: `{ "amount": 0, "availibility_level": "OUT_OF_STOCK" }` (sic).
+- The `apiKey` is scraped from the same PDP the adapter already fetches
+  (`apiKey: "…"`), so it self-heals if Bauhaus rotates it.
 
-- `src/data/bauhaus-stores.json` — all 23 AT Fachcentren (id, name, zip, city),
-  harvested from `bauhaus.at/fachcentren/fachcentrensuche`. Coordinates are
-  resolved from zip via our existing GeoNames PLZ table.
-- `src/lib/retailers/bauhaus-stores.ts` — `fetchBauhausStoreStock(fetchFn, token)`
-  sweeps every Fachcentrum via the product-stock endpoint and returns
-  `StoreStock[]`. 401 → throws (caller refreshes token); per-store errors are
-  skipped. `parseStock()` is defensive (availableQuantity / stockLevel /
-  quantity / available / inStock) because the live 200 shape is **unverified**.
-- `src/lib/retailers/bauhaus-token.ts` — `getBauhausToken()`; reads
-  `BAUHAUS_ACCESS_TOKEN` env for now, returns null otherwise.
-- `bauhaus.ts` adapter — when a token is present, includes `storeStock`; else
-  `null` (degrades to today's online-only behaviour). Once storeStock flows,
-  the existing pipeline (persistence, map markers, store-restock alerts, feed)
-  lights up automatically — no other changes needed.
-- Tests cover the parser and the sweep (geo resolution, auth header, 401,
-  per-store error isolation).
+This means no persistent browser session (unlike letzteklima) and no new heavy
+dependency — it fits the existing poller.
 
-## What's left to make it live
+## Implementation
 
-1. **Obtain a token.** Fastest validation: paste a bearer captured from a real
-   browser session into `BAUHAUS_ACCESS_TOKEN` and run `/api/admin/check`.
-2. **Confirm the response shape** of a live 200 and tighten `parseStock`.
-3. **Automate token minting** — a small headless-browser (Playwright) worker
-   that mints + refreshes the token on 401, run outside the main container (or
-   as an opt-in dependency). This is the deliberate trade-off: it breaks the
-   "one lightweight container" model, which is why it lives on a branch.
+- `src/data/bauhaus-stores.json` — 23 AT Fachcentren (id, name, zip, city),
+  harvested from `bauhaus.at/fachcentren/fachcentrensuche`; coordinates resolved
+  from zip via the existing GeoNames PLZ table.
+- `bauhaus-stores.ts` — `fetchBauhausStoreStock(fetchFn, apiKey)` sweeps every
+  Fachcentrum (apikey + Origin headers), returns `StoreStock[]`. `parseStock`
+  reads `{amount, availibility_level}`; 401/403 (rotated key) throws so the
+  adapter degrades; per-store errors are skipped.
+- `bauhaus.ts` — extracts the apiKey from the PDP HTML and includes storeStock;
+  falls back to online-only if the key is missing/rejected.
+- Fixture `__fixtures__/bauhaus-stock-warehouse.json` (real 200 response); tests
+  for the parser and the sweep.
 
-## Cross-check
+Verified live: adapter returns the online offer + 23 Fachcentren with per-store
+stock in ~4.4s. The rest of the pipeline (persistence, map markers,
+store-restock alerts, feed) works unchanged.
 
-Bauhaus warehouse ids and the AT Fachcentrum set match letzteklima's data,
-and our earlier finding that Hornbach delisted the product is confirmed by
-their `data.json` too.
+## Caveats / to watch
+
+- Only `OUT_OF_STOCK` was observable (product sold out everywhere), so the
+  positive `availibility_level` values (IN_STOCK/LOW_STOCK/…) are matched
+  generously; confirm exact strings when a store restocks.
+- The apiKey is public but could rotate — self-healing via PDP scrape covers
+  that; a hard 401/403 just degrades to online-only.
+- Runs on the slow tier (23 requests/sweep, once every 180s) — polite.
+
+## Merge note
+
+Because it needs no browser/token, this can merge to `main`. Doing so triples
+the map's coverage (OBI 79 + Bauhaus 23 Fachcentren) and enables Bauhaus
+store-restock alerts.
