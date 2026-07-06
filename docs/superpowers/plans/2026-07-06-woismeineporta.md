@@ -13,7 +13,7 @@
 ## Global Constraints
 
 - Package manager: **pnpm**. Node 22.
-- All UI copy in **German**. Site name: **"Wo ist meine Porta?"**
+- All UI copy in **German**. Site name: **"Wo is meine Porta?"**
 - Variant slugs are exactly `portasplit` and `portasplit-cool`; retailer slugs exactly `bauhaus`, `obi`, `hornbach`, `mediamarkt`, `tepto`.
 - Prices stored as **integer cents**; timestamps as **unix ms integers**.
 - SQLite file path from env `DATABASE_PATH` (default `./data/app.db`); tests use in-memory DB (`:memory:`). TypeORM uses `synchronize: true` (small additive schema, documented in README with backup note) — no migration files. All DB-touching functions are `async`.
@@ -27,10 +27,12 @@
 ### Task 1: Project scaffold
 
 **Files:**
+
 - Create: Next.js app in repo root via create-next-app, `vitest.config.ts`, `.env.example`, `data/.gitkeep`
 - Modify: `package.json` (scripts), `.gitignore` (add `data/*.db*`, `.env`)
 
 **Interfaces:**
+
 - Produces: working `pnpm dev`, `pnpm build`, `pnpm vitest run` (0 tests OK → use `--passWithNoTests`), Tailwind v4 wired.
 
 - [ ] **Step 1: Scaffold** (repo already has `docs/` + `.git` — create-next-app tolerates non-empty dir only when files don't conflict; scaffold into a temp dir and move if it refuses)
@@ -53,13 +55,14 @@ pnpm add -D vitest @types/better-sqlite3 @types/web-push tsx
 `next.config.ts`: set `output: 'standalone'` and `serverExternalPackages: ['better-sqlite3']`.
 
 `vitest.config.ts`:
+
 ```ts
-import { defineConfig } from 'vitest/config';
-import path from 'node:path';
+import { defineConfig } from "vitest/config";
+import path from "node:path";
 
 export default defineConfig({
-  test: { environment: 'node', passWithNoTests: true },
-  resolve: { alias: { '@': path.resolve(__dirname, 'src') } },
+  test: { environment: "node", passWithNoTests: true },
+  resolve: { alias: { "@": path.resolve(__dirname, "src") } },
 });
 ```
 
@@ -80,10 +83,12 @@ Run: `pnpm build && pnpm test` — both succeed.
 ### Task 2: Database entities, DataSource, seed (TypeORM)
 
 **Files:**
+
 - Create: `src/db/entities.ts`, `src/db/index.ts`, `src/db/seed.ts`
 - Test: `src/db/__tests__/db.test.ts`
 
 **Interfaces:**
+
 - Produces:
   - `createDb(path?: string): Promise<AppDb>` in `src/db/index.ts` — initializes a TypeORM DataSource (`type: 'better-sqlite3'`, `synchronize: true`, WAL pragma for file DBs), seeds `variants` + `retailers`. `export type AppDb = DataSource`.
   - `getDb(): Promise<AppDb>` — lazy singleton promise using `process.env.DATABASE_PATH ?? './data/app.db'`.
@@ -92,200 +97,265 @@ Run: `pnpm build && pnpm test` — both succeed.
 - [ ] **Step 1: Write entities** — `src/db/entities.ts` (EntitySchema, no decorators — keeps Turbopack/Vitest config untouched):
 
 ```ts
-import { EntitySchema } from 'typeorm';
+import { EntitySchema } from "typeorm";
 
-export type StockStatusDb = 'in_stock' | 'out_of_stock' | 'unknown';
+export type StockStatusDb = "in_stock" | "out_of_stock" | "unknown";
 
-export interface Variant { slug: string; name: string; uvpCents: number; }
+export interface Variant {
+  slug: string;
+  name: string;
+  uvpCents: number;
+}
 export const VariantEntity = new EntitySchema<Variant>({
-  name: 'variant', tableName: 'variants',
+  name: "variant",
+  tableName: "variants",
   columns: {
-    slug: { type: 'text', primary: true },
-    name: { type: 'text' },
-    uvpCents: { type: 'integer', name: 'uvp_cents' },
+    slug: { type: "text", primary: true },
+    name: { type: "text" },
+    uvpCents: { type: "integer", name: "uvp_cents" },
   },
 });
 
-export interface Retailer { slug: string; name: string; homepage: string; }
+export interface Retailer {
+  slug: string;
+  name: string;
+  homepage: string;
+}
 export const RetailerEntity = new EntitySchema<Retailer>({
-  name: 'retailer', tableName: 'retailers',
+  name: "retailer",
+  tableName: "retailers",
   columns: {
-    slug: { type: 'text', primary: true },
-    name: { type: 'text' },
-    homepage: { type: 'text' },
+    slug: { type: "text", primary: true },
+    name: { type: "text" },
+    homepage: { type: "text" },
   },
 });
 
 export interface Offer {
-  id: number; retailerSlug: string; variantSlug: string; url: string;
-  priceCents: number | null; status: StockStatusDb;
-  lastCheckedAt: number; lastChangedAt: number;
+  id: number;
+  retailerSlug: string;
+  variantSlug: string;
+  url: string;
+  priceCents: number | null;
+  status: StockStatusDb;
+  lastCheckedAt: number;
+  lastChangedAt: number;
 }
 export const OfferEntity = new EntitySchema<Offer>({
-  name: 'offer', tableName: 'offers',
+  name: "offer",
+  tableName: "offers",
   columns: {
-    id: { type: 'integer', primary: true, generated: true },
-    retailerSlug: { type: 'text', name: 'retailer_slug' },
-    variantSlug: { type: 'text', name: 'variant_slug' },
-    url: { type: 'text' },
-    priceCents: { type: 'integer', name: 'price_cents', nullable: true },
-    status: { type: 'text', default: 'unknown' },
-    lastCheckedAt: { type: 'integer', name: 'last_checked_at', default: 0 },
-    lastChangedAt: { type: 'integer', name: 'last_changed_at', default: 0 },
+    id: { type: "integer", primary: true, generated: true },
+    retailerSlug: { type: "text", name: "retailer_slug" },
+    variantSlug: { type: "text", name: "variant_slug" },
+    url: { type: "text" },
+    priceCents: { type: "integer", name: "price_cents", nullable: true },
+    status: { type: "text", default: "unknown" },
+    lastCheckedAt: { type: "integer", name: "last_checked_at", default: 0 },
+    lastChangedAt: { type: "integer", name: "last_changed_at", default: 0 },
   },
-  indices: [{ name: 'offers_retailer_variant', columns: ['retailerSlug', 'variantSlug'], unique: true }],
+  indices: [{ name: "offers_retailer_variant", columns: ["retailerSlug", "variantSlug"], unique: true }],
 });
 
 export interface Store {
-  id: number; retailerSlug: string; externalId: string; name: string;
-  zip: string; city: string; latE6: number; lngE6: number; // degrees * 1e6
+  id: number;
+  retailerSlug: string;
+  externalId: string;
+  name: string;
+  zip: string;
+  city: string;
+  latE6: number;
+  lngE6: number; // degrees * 1e6
 }
 export const StoreEntity = new EntitySchema<Store>({
-  name: 'store', tableName: 'stores',
+  name: "store",
+  tableName: "stores",
   columns: {
-    id: { type: 'integer', primary: true, generated: true },
-    retailerSlug: { type: 'text', name: 'retailer_slug' },
-    externalId: { type: 'text', name: 'external_id' },
-    name: { type: 'text' },
-    zip: { type: 'text' },
-    city: { type: 'text' },
-    latE6: { type: 'integer', name: 'lat_e6' },
-    lngE6: { type: 'integer', name: 'lng_e6' },
+    id: { type: "integer", primary: true, generated: true },
+    retailerSlug: { type: "text", name: "retailer_slug" },
+    externalId: { type: "text", name: "external_id" },
+    name: { type: "text" },
+    zip: { type: "text" },
+    city: { type: "text" },
+    latE6: { type: "integer", name: "lat_e6" },
+    lngE6: { type: "integer", name: "lng_e6" },
   },
-  indices: [{ name: 'stores_retailer_external', columns: ['retailerSlug', 'externalId'], unique: true }],
+  indices: [{ name: "stores_retailer_external", columns: ["retailerSlug", "externalId"], unique: true }],
 });
 
 export interface StoreAvailability {
-  id: number; storeId: number; variantSlug: string; inStock: boolean;
-  lastCheckedAt: number; lastChangedAt: number;
+  id: number;
+  storeId: number;
+  variantSlug: string;
+  inStock: boolean;
+  lastCheckedAt: number;
+  lastChangedAt: number;
 }
 export const StoreAvailabilityEntity = new EntitySchema<StoreAvailability>({
-  name: 'store_availability', tableName: 'store_availability',
+  name: "store_availability",
+  tableName: "store_availability",
   columns: {
-    id: { type: 'integer', primary: true, generated: true },
-    storeId: { type: 'integer', name: 'store_id' },
-    variantSlug: { type: 'text', name: 'variant_slug' },
-    inStock: { type: 'boolean', name: 'in_stock' },
-    lastCheckedAt: { type: 'integer', name: 'last_checked_at', default: 0 },
-    lastChangedAt: { type: 'integer', name: 'last_changed_at', default: 0 },
+    id: { type: "integer", primary: true, generated: true },
+    storeId: { type: "integer", name: "store_id" },
+    variantSlug: { type: "text", name: "variant_slug" },
+    inStock: { type: "boolean", name: "in_stock" },
+    lastCheckedAt: { type: "integer", name: "last_checked_at", default: 0 },
+    lastChangedAt: { type: "integer", name: "last_changed_at", default: 0 },
   },
-  indices: [{ name: 'sa_store_variant', columns: ['storeId', 'variantSlug'], unique: true }],
+  indices: [{ name: "sa_store_variant", columns: ["storeId", "variantSlug"], unique: true }],
 });
 
-export type EventTypeDb = 'online_restock' | 'online_soldout' | 'price_change' | 'store_restock' | 'store_soldout';
+export type EventTypeDb = "online_restock" | "online_soldout" | "price_change" | "store_restock" | "store_soldout";
 export interface EventRow {
-  id: number; type: EventTypeDb; retailerSlug: string; variantSlug: string;
-  storeId: number | null; priceCents: number | null; createdAt: number;
+  id: number;
+  type: EventTypeDb;
+  retailerSlug: string;
+  variantSlug: string;
+  storeId: number | null;
+  priceCents: number | null;
+  createdAt: number;
 }
 export const EventEntity = new EntitySchema<EventRow>({
-  name: 'event', tableName: 'events',
+  name: "event",
+  tableName: "events",
   columns: {
-    id: { type: 'integer', primary: true, generated: true },
-    type: { type: 'text' },
-    retailerSlug: { type: 'text', name: 'retailer_slug' },
-    variantSlug: { type: 'text', name: 'variant_slug' },
-    storeId: { type: 'integer', name: 'store_id', nullable: true },
-    priceCents: { type: 'integer', name: 'price_cents', nullable: true },
-    createdAt: { type: 'integer', name: 'created_at' },
+    id: { type: "integer", primary: true, generated: true },
+    type: { type: "text" },
+    retailerSlug: { type: "text", name: "retailer_slug" },
+    variantSlug: { type: "text", name: "variant_slug" },
+    storeId: { type: "integer", name: "store_id", nullable: true },
+    priceCents: { type: "integer", name: "price_cents", nullable: true },
+    createdAt: { type: "integer", name: "created_at" },
   },
-  indices: [{ name: 'events_created', columns: ['createdAt'] }],
+  indices: [{ name: "events_created", columns: ["createdAt"] }],
 });
 
 export interface PushSubscription {
-  id: number; endpoint: string; p256dh: string; auth: string;
+  id: number;
+  endpoint: string;
+  p256dh: string;
+  auth: string;
   variantSlugs: string; // JSON array string
-  zip: string | null; radiusKm: number | null; createdAt: number;
+  zip: string | null;
+  radiusKm: number | null;
+  createdAt: number;
 }
 export const PushSubscriptionEntity = new EntitySchema<PushSubscription>({
-  name: 'push_subscription', tableName: 'push_subscriptions',
+  name: "push_subscription",
+  tableName: "push_subscriptions",
   columns: {
-    id: { type: 'integer', primary: true, generated: true },
-    endpoint: { type: 'text', unique: true },
-    p256dh: { type: 'text' },
-    auth: { type: 'text' },
-    variantSlugs: { type: 'text', name: 'variant_slugs' },
-    zip: { type: 'text', nullable: true },
-    radiusKm: { type: 'integer', name: 'radius_km', nullable: true },
-    createdAt: { type: 'integer', name: 'created_at' },
+    id: { type: "integer", primary: true, generated: true },
+    endpoint: { type: "text", unique: true },
+    p256dh: { type: "text" },
+    auth: { type: "text" },
+    variantSlugs: { type: "text", name: "variant_slugs" },
+    zip: { type: "text", nullable: true },
+    radiusKm: { type: "integer", name: "radius_km", nullable: true },
+    createdAt: { type: "integer", name: "created_at" },
   },
 });
 
 export interface EmailSubscription {
-  id: number; email: string; confirmToken: string; unsubscribeToken: string;
-  confirmed: boolean; variantSlugs: string; zip: string | null;
-  radiusKm: number | null; createdAt: number;
+  id: number;
+  email: string;
+  confirmToken: string;
+  unsubscribeToken: string;
+  confirmed: boolean;
+  variantSlugs: string;
+  zip: string | null;
+  radiusKm: number | null;
+  createdAt: number;
 }
 export const EmailSubscriptionEntity = new EntitySchema<EmailSubscription>({
-  name: 'email_subscription', tableName: 'email_subscriptions',
+  name: "email_subscription",
+  tableName: "email_subscriptions",
   columns: {
-    id: { type: 'integer', primary: true, generated: true },
-    email: { type: 'text', unique: true },
-    confirmToken: { type: 'text', name: 'confirm_token' },
-    unsubscribeToken: { type: 'text', name: 'unsubscribe_token' },
-    confirmed: { type: 'boolean', default: false },
-    variantSlugs: { type: 'text', name: 'variant_slugs' },
-    zip: { type: 'text', nullable: true },
-    radiusKm: { type: 'integer', name: 'radius_km', nullable: true },
-    createdAt: { type: 'integer', name: 'created_at' },
+    id: { type: "integer", primary: true, generated: true },
+    email: { type: "text", unique: true },
+    confirmToken: { type: "text", name: "confirm_token" },
+    unsubscribeToken: { type: "text", name: "unsubscribe_token" },
+    confirmed: { type: "boolean", default: false },
+    variantSlugs: { type: "text", name: "variant_slugs" },
+    zip: { type: "text", nullable: true },
+    radiusKm: { type: "integer", name: "radius_km", nullable: true },
+    createdAt: { type: "integer", name: "created_at" },
   },
 });
 
-export interface CheckRun { id: number; startedAt: number; durationMs: number; summary: string; }
+export interface CheckRun {
+  id: number;
+  startedAt: number;
+  durationMs: number;
+  summary: string;
+}
 export const CheckRunEntity = new EntitySchema<CheckRun>({
-  name: 'check_run', tableName: 'check_runs',
+  name: "check_run",
+  tableName: "check_runs",
   columns: {
-    id: { type: 'integer', primary: true, generated: true },
-    startedAt: { type: 'integer', name: 'started_at' },
-    durationMs: { type: 'integer', name: 'duration_ms' },
-    summary: { type: 'text' },
+    id: { type: "integer", primary: true, generated: true },
+    startedAt: { type: "integer", name: "started_at" },
+    durationMs: { type: "integer", name: "duration_ms" },
+    summary: { type: "text" },
   },
 });
 
 export interface NotificationLogRow {
-  id: number; channel: 'push' | 'email'; subscriptionId: number;
-  dedupeKey: string; sentAt: number; // dedupeKey: 'online:{retailer}:{variant}' | 'store:{retailer}:{externalId}:{variant}'
+  id: number;
+  channel: "push" | "email";
+  subscriptionId: number;
+  dedupeKey: string;
+  sentAt: number; // dedupeKey: 'online:{retailer}:{variant}' | 'store:{retailer}:{externalId}:{variant}'
 }
 export const NotificationLogEntity = new EntitySchema<NotificationLogRow>({
-  name: 'notification_log', tableName: 'notification_log',
+  name: "notification_log",
+  tableName: "notification_log",
   columns: {
-    id: { type: 'integer', primary: true, generated: true },
-    channel: { type: 'text' },
-    subscriptionId: { type: 'integer', name: 'subscription_id' },
-    dedupeKey: { type: 'text', name: 'dedupe_key' },
-    sentAt: { type: 'integer', name: 'sent_at' },
+    id: { type: "integer", primary: true, generated: true },
+    channel: { type: "text" },
+    subscriptionId: { type: "integer", name: "subscription_id" },
+    dedupeKey: { type: "text", name: "dedupe_key" },
+    sentAt: { type: "integer", name: "sent_at" },
   },
-  indices: [{ name: 'nl_dedupe', columns: ['channel', 'subscriptionId', 'dedupeKey', 'sentAt'] }],
+  indices: [{ name: "nl_dedupe", columns: ["channel", "subscriptionId", "dedupeKey", "sentAt"] }],
 });
 
 export const allEntities = [
-  VariantEntity, RetailerEntity, OfferEntity, StoreEntity, StoreAvailabilityEntity,
-  EventEntity, PushSubscriptionEntity, EmailSubscriptionEntity, CheckRunEntity, NotificationLogEntity,
+  VariantEntity,
+  RetailerEntity,
+  OfferEntity,
+  StoreEntity,
+  StoreAvailabilityEntity,
+  EventEntity,
+  PushSubscriptionEntity,
+  EmailSubscriptionEntity,
+  CheckRunEntity,
+  NotificationLogEntity,
 ];
 ```
 
 - [ ] **Step 2: DataSource + seed** — `src/db/index.ts`:
 
 ```ts
-import 'reflect-metadata';
-import { DataSource } from 'typeorm';
-import { allEntities } from './entities';
-import { seed } from './seed';
-import path from 'node:path';
-import fs from 'node:fs';
+import "reflect-metadata";
+import { DataSource } from "typeorm";
+import { allEntities } from "./entities";
+import { seed } from "./seed";
+import path from "node:path";
+import fs from "node:fs";
 
 export type AppDb = DataSource;
-export * from './entities';
+export * from "./entities";
 
-export async function createDb(dbPath = process.env.DATABASE_PATH ?? './data/app.db'): Promise<AppDb> {
-  if (dbPath !== ':memory:') fs.mkdirSync(path.dirname(dbPath), { recursive: true });
+export async function createDb(dbPath = process.env.DATABASE_PATH ?? "./data/app.db"): Promise<AppDb> {
+  if (dbPath !== ":memory:") fs.mkdirSync(path.dirname(dbPath), { recursive: true });
   const ds = new DataSource({
-    type: 'better-sqlite3',
+    type: "better-sqlite3",
     database: dbPath,
     entities: allEntities,
     synchronize: true,
   });
   await ds.initialize();
-  if (dbPath !== ':memory:') await ds.query('PRAGMA journal_mode = WAL');
+  if (dbPath !== ":memory:") await ds.query("PRAGMA journal_mode = WAL");
   await seed(ds);
   return ds;
 }
@@ -310,16 +380,18 @@ export function getDb(): Promise<AppDb> {
 ### Task 3: Adapter contract + registry
 
 **Files:**
+
 - Create: `src/lib/retailers/types.ts`, `src/lib/retailers/registry.ts`, `src/lib/retailers/fetch.ts`
 - Test: `src/lib/retailers/__tests__/fetch.test.ts`
 
 **Interfaces:**
+
 - Produces (exact, all tasks 5–7 and 11 depend on these):
 
 ```ts
 // src/lib/retailers/types.ts
-export type StockStatus = 'in_stock' | 'out_of_stock' | 'unknown';
-export type VariantSlug = 'portasplit' | 'portasplit-cool';
+export type StockStatus = "in_stock" | "out_of_stock" | "unknown";
+export type VariantSlug = "portasplit" | "portasplit-cool";
 
 export interface OnlineOffer {
   variant: VariantSlug;
@@ -333,11 +405,15 @@ export interface StoreInfo {
   name: string;
   zip: string;
   city: string;
-  lat: number;   // decimal degrees
+  lat: number; // decimal degrees
   lng: number;
 }
 
-export interface StoreStock { store: StoreInfo; variant: VariantSlug; inStock: boolean; }
+export interface StoreStock {
+  store: StoreInfo;
+  variant: VariantSlug;
+  inStock: boolean;
+}
 
 export interface RetailerResult {
   retailerSlug: string;
@@ -347,7 +423,7 @@ export interface RetailerResult {
 
 export interface RetailerAdapter {
   slug: string;
-  tier: 'fast' | 'slow';
+  tier: "fast" | "slow";
   check(fetchFn: typeof fetch): Promise<RetailerResult>;
 }
 ```
@@ -364,9 +440,11 @@ export interface RetailerAdapter {
 ### Task 4: Endpoint discovery + fixtures (research task — no TDD)
 
 **Files:**
+
 - Create: `docs/retailers.md`, `src/lib/retailers/__fixtures__/<retailer>-*.json|html`
 
 **Interfaces:**
+
 - Produces: for each of bauhaus/obi/hornbach/mediamarkt/tepto and each variant they list: product page URL, article/SKU id, the JSON endpoint (or page) for online availability + price, the JSON endpoint for per-store availability (bauhaus/obi/hornbach/mediamarkt), request headers needed, and saved response fixtures (both current state and — if only one state is observable — a hand-edited copy representing the opposite stock state, clearly named `*-synthetic.json`).
 
 - [ ] **Step 1:** Use `agent-browser` per retailer: `agent-browser open <product-search-url>`, find the PortaSplit / PortaSplit Cool product pages, open DevTools-equivalent via `agent-browser network requests` after entering a ZIP in the store-availability widget (use ZIP 1010 Wien) to capture the availability API calls.
@@ -379,11 +457,13 @@ export interface RetailerAdapter {
 ### Task 5: Fast-tier adapters (Bauhaus, Obi, Hornbach)
 
 **Files:**
+
 - Create: `src/lib/retailers/bauhaus.ts`, `src/lib/retailers/obi.ts`, `src/lib/retailers/hornbach.ts`
 - Modify: `src/lib/retailers/registry.ts` (register all three)
 - Test: `src/lib/retailers/__tests__/bauhaus.test.ts` (+ obi, + hornbach)
 
 **Interfaces:**
+
 - Consumes: `RetailerAdapter`, `politeFetch`, fixtures + `docs/retailers.md` from Task 4.
 - Produces: `bauhausAdapter`, `obiAdapter`, `hornbachAdapter` — each `RetailerAdapter` with `tier: 'fast'`, returning offers for every variant the retailer lists and full `storeStock` for all Austrian stores.
 
@@ -398,11 +478,13 @@ Per adapter, same TDD cycle:
 ### Task 6: Slow-tier adapters (MediaMarkt, Tepto)
 
 **Files:**
+
 - Create: `src/lib/retailers/mediamarkt.ts`, `src/lib/retailers/tepto.ts`
 - Modify: `src/lib/retailers/registry.ts`
 - Test: `src/lib/retailers/__tests__/mediamarkt.test.ts`, `.../tepto.test.ts`
 
 **Interfaces:**
+
 - Consumes/Produces: same contract as Task 5; `tier: 'slow'`. Tepto: `storeStock: null`, HTML parsing with a small regex/string extraction (no cheerio unless needed — if needed, `pnpm add cheerio` is acceptable). MediaMarkt: GraphQL/JSON endpoints from Task 4; if blocked outside browsers, implement anyway against fixtures and let runtime yield `unknown` via thrown `AdapterHttpError`.
 
 - [ ] Same 5-step TDD cycle per adapter as Task 5. Commit each.
@@ -412,22 +494,27 @@ Per adapter, same TDD cycle:
 ### Task 7: Diff engine + persistence
 
 **Files:**
+
 - Create: `src/lib/diff.ts`, `src/lib/state.ts`
 - Test: `src/lib/__tests__/diff.test.ts`, `src/lib/__tests__/state.test.ts`
 
 **Interfaces:**
+
 - Consumes: `RetailerResult`, db tables from Task 2.
 - Produces:
 
 ```ts
 // src/lib/diff.ts  (pure — no DB)
-export interface OfferState { status: StockStatus; priceCents: number | null; }
+export interface OfferState {
+  status: StockStatus;
+  priceCents: number | null;
+}
 export interface PrevState {
-  offers: Map<string, OfferState>;            // key: `${variant}`
-  storeStock: Map<string, boolean>;           // key: `${externalId}:${variant}`
+  offers: Map<string, OfferState>; // key: `${variant}`
+  storeStock: Map<string, boolean>; // key: `${externalId}:${variant}`
 }
 export interface StockEvent {
-  type: 'online_restock' | 'online_soldout' | 'price_change' | 'store_restock' | 'store_soldout';
+  type: "online_restock" | "online_soldout" | "price_change" | "store_restock" | "store_soldout";
   retailerSlug: string;
   variantSlug: VariantSlug;
   storeExternalId?: string;
@@ -458,10 +545,12 @@ export function markUnknown(db: AppDb, retailerSlug: string, now: number): Promi
 ### Task 8: Austrian PLZ geo lookup
 
 **Files:**
+
 - Create: `scripts/build-plz.ts`, `src/data/plz-at.json` (generated, committed), `src/lib/geo.ts`
 - Test: `src/lib/__tests__/geo.test.ts`
 
 **Interfaces:**
+
 - Produces:
 
 ```ts
@@ -479,19 +568,26 @@ export function distanceKm(aLat: number, aLng: number, bLat: number, bLng: numbe
 ### Task 9: Web Push — subscribe API + sender
 
 **Files:**
+
 - Create: `src/lib/notify/push.ts`, `src/app/api/subscribe/push/route.ts`
 - Test: `src/lib/notify/__tests__/push.test.ts`
 
 **Interfaces:**
+
 - Consumes: `pushSubscriptions` table, `getDb`.
 - Produces:
 
 ```ts
 // src/lib/notify/push.ts
-export interface PushPayload { title: string; body: string; url: string; }
-export function sendPush(db: AppDb, subId: number, payload: PushPayload, webpushImpl?: typeof webpush): Promise<'sent' | 'gone' | 'failed'>;
+export interface PushPayload {
+  title: string;
+  body: string;
+  url: string;
+}
+export function sendPush(db: AppDb, subId: number, payload: PushPayload, webpushImpl?: typeof webpush): Promise<"sent" | "gone" | "failed">;
 // 'gone' (404/410 from push service) ⇒ row deleted from pushSubscriptions
 ```
+
 - Route `POST /api/subscribe/push` body: `{ endpoint, keys: { p256dh, auth }, variantSlugs: string[], zip?: string, radiusKm?: number }` → upsert by endpoint, 200 `{ ok: true }`. `DELETE` body `{ endpoint }` → remove. Validate: variantSlugs ⊆ known slugs, zip matches `/^\d{4}$/` and resolvable via `plzToLatLng`, radiusKm 1–200.
 
 - [ ] **Step 1: Failing tests:** with in-memory db + mocked webpush impl: success → 'sent' + row in `notificationLog` NOT written here (that's Task 11's job — sender is dumb); mock rejects with `{statusCode: 410}` → 'gone' + row deleted; other error → 'failed', row kept.
@@ -504,18 +600,24 @@ export function sendPush(db: AppDb, subId: number, payload: PushPayload, webpush
 ### Task 10: Email — Resend double opt-in
 
 **Files:**
+
 - Create: `src/lib/notify/email.ts`, `src/app/api/subscribe/email/route.ts`, `src/app/api/subscribe/email/confirm/route.ts`, `src/app/api/subscribe/email/unsubscribe/route.ts`
 - Test: `src/lib/notify/__tests__/email.test.ts`
 
 **Interfaces:**
+
 - Produces:
 
 ```ts
 // src/lib/notify/email.ts
-export function createEmailSubscription(db: AppDb, input: { email: string; variantSlugs: string[]; zip?: string; radiusKm?: number }, send?: SendFn): Promise<'created' | 'resent' | 'invalid'>; // generates tokens (crypto.randomUUID), sends confirm mail with link `${PUBLIC_BASE_URL}/api/subscribe/email/confirm?token=...`
+export function createEmailSubscription(
+  db: AppDb,
+  input: { email: string; variantSlugs: string[]; zip?: string; radiusKm?: number },
+  send?: SendFn,
+): Promise<"created" | "resent" | "invalid">; // generates tokens (crypto.randomUUID), sends confirm mail with link `${PUBLIC_BASE_URL}/api/subscribe/email/confirm?token=...`
 export function confirmEmail(db: AppDb, token: string): boolean;
 export function unsubscribeEmail(db: AppDb, token: string): boolean;
-export function sendAlertEmail(db: AppDb, subId: number, subject: string, html: string, send?: SendFn): Promise<'sent' | 'failed'>; // html must include unsubscribe link
+export function sendAlertEmail(db: AppDb, subId: number, subject: string, html: string, send?: SendFn): Promise<"sent" | "failed">; // html must include unsubscribe link
 export type SendFn = (to: string, subject: string, html: string) => Promise<void>; // default impl wraps Resend
 ```
 
@@ -528,18 +630,26 @@ export type SendFn = (to: string, subject: string, html: string) => Promise<void
 ### Task 11: Notifier orchestration
 
 **Files:**
+
 - Create: `src/lib/notify/orchestrator.ts`
 - Test: `src/lib/notify/__tests__/orchestrator.test.ts`
 
 **Interfaces:**
+
 - Consumes: `StockEvent[]`, subscriptions tables, `sendPush`, `sendAlertEmail`, `plzToLatLng`, `distanceKm`, `notificationLog`.
 - Produces:
 
 ```ts
-export async function notifyEvents(db: AppDb, events: StockEvent[], now: number, deps?: { push?: typeof sendPush; email?: typeof sendAlertEmail }): Promise<{ pushed: number; emailed: number }>;
+export async function notifyEvents(
+  db: AppDb,
+  events: StockEvent[],
+  now: number,
+  deps?: { push?: typeof sendPush; email?: typeof sendAlertEmail },
+): Promise<{ pushed: number; emailed: number }>;
 ```
 
 Rules (test each):
+
 - Only `online_restock` and `store_restock` notify; other events ignored.
 - Recipient match: subscription's `variantSlugs` includes the event's variant. For `store_restock` additionally: subscriber has zip+radius AND store within radius (store coords from `stores` table); subscribers **without** zip get online events only.
 - Dedupe/cooldown: skip if `notificationLog` has same `(channel, subscriptionId, dedupeKey)` with `sentAt > now - 60min`. dedupeKey: `online:{retailer}:{variant}` / `store:{retailer}:{storeExternalId}:{variant}`.
@@ -554,21 +664,32 @@ Rules (test each):
 ### Task 12: Poller + admin trigger
 
 **Files:**
+
 - Create: `src/lib/poller.ts`, `src/instrumentation.ts`, `src/app/api/admin/check/route.ts`
 - Test: `src/lib/__tests__/poller.test.ts`
 
 **Interfaces:**
+
 - Consumes: `adapters` registry, `loadPrevState`/`computeDiff`/`persistResult`/`markUnknown`, `notifyEvents`, `checkRuns`.
 - Produces:
 
 ```ts
 // src/lib/poller.ts
-export interface TickSummary { ran: string[]; events: number; errors: Record<string, string>; durationMs: number; }
-export async function runTick(db: AppDb, opts: { now: number; force?: boolean; adapterList?: RetailerAdapter[]; fetchFn?: typeof fetch; notify?: typeof notifyEvents }): Promise<TickSummary>;
+export interface TickSummary {
+  ran: string[];
+  events: number;
+  errors: Record<string, string>;
+  durationMs: number;
+}
+export async function runTick(
+  db: AppDb,
+  opts: { now: number; force?: boolean; adapterList?: RetailerAdapter[]; fetchFn?: typeof fetch; notify?: typeof notifyEvents },
+): Promise<TickSummary>;
 export function startPoller(): void; // reads env, setInterval(POLL_FAST_MS), guards overlap + backoff
 ```
 
 Behavior (test via `runTick` with fake adapters/clock — never real HTTP):
+
 - Due-ness: per adapter track `lastRunAt` (module-level Map, injectable); fast runs when `now - lastRunAt >= POLL_FAST_MS`, slow `>= POLL_SLOW_MS`; `force: true` runs all.
 - Adapter throws ⇒ `markUnknown` after **3 consecutive** failures (track consecutive-failure count; before that keep last state), error recorded in summary, other adapters still run.
 - Backoff: after a throw with `AdapterHttpError` 403/429, that adapter's effective interval doubles (cap 30 min) until a success resets it.
@@ -584,27 +705,51 @@ Behavior (test via `runTick` with fake adapters/clock — never real HTTP):
 ### Task 13: Frontend — main page
 
 **Files:**
+
 - Create: `src/app/page.tsx`, `src/app/api/status/route.ts`, `src/app/api/stores/route.ts`, `src/components/StatusCard.tsx`, `src/components/StoreFinder.tsx`, `src/components/EventFeed.tsx`, `src/components/LiveRefresh.tsx`, `src/lib/queries.ts`, `src/lib/format.ts`
 - Modify: `src/app/layout.tsx` (metadata, German lang, header/footer)
 - Test: `src/lib/__tests__/format.test.ts`, `src/lib/__tests__/queries.test.ts`
 
 **Interfaces:**
+
 - Consumes: db tables; Produces for Task 14: page slots a `<SubscribePanel />` placeholder imported from `src/components/SubscribePanel.tsx` (Task 14 creates it; until then export a stub from Task 13 rendering `null`).
 
 ```ts
 // src/lib/queries.ts
-export interface VariantStatus { variant: { slug: VariantSlug; name: string; uvpCents: number }; offers: Array<{ retailerSlug: string; retailerName: string; url: string; priceCents: number | null; status: StockStatus; lastCheckedAt: number; lastChangedAt: number }>; }
+export interface VariantStatus {
+  variant: { slug: VariantSlug; name: string; uvpCents: number };
+  offers: Array<{
+    retailerSlug: string;
+    retailerName: string;
+    url: string;
+    priceCents: number | null;
+    status: StockStatus;
+    lastCheckedAt: number;
+    lastChangedAt: number;
+  }>;
+}
 export function getVariantStatuses(db: AppDb): Promise<VariantStatus[]>;
-export function getRecentEvents(db: AppDb, limit?: number): Promise<Array<{ type: string; retailerName: string; variantName: string; storeName: string | null; priceCents: number | null; createdAt: number }>>;
-export function findStoresNear(db: AppDb, zip: string, radiusKm: number, variant?: VariantSlug): Promise<Array<{ retailerName: string; name: string; zip: string; city: string; distanceKm: number; inStock: boolean; lastCheckedAt: number }>>; // sorted by distance, in-stock first
+export function getRecentEvents(
+  db: AppDb,
+  limit?: number,
+): Promise<
+  Array<{ type: string; retailerName: string; variantName: string; storeName: string | null; priceCents: number | null; createdAt: number }>
+>;
+export function findStoresNear(
+  db: AppDb,
+  zip: string,
+  radiusKm: number,
+  variant?: VariantSlug,
+): Promise<Array<{ retailerName: string; name: string; zip: string; city: string; distanceKm: number; inStock: boolean; lastCheckedAt: number }>>; // sorted by distance, in-stock first
 // src/lib/format.ts
-export function formatPrice(cents: number | null): string;        // 119900 → "1.199,00 €", null → "–"
+export function formatPrice(cents: number | null): string; // 119900 → "1.199,00 €", null → "–"
 export function formatRelativeTime(ts: number, now: number): string; // "vor 2 Min", "vor 3 Std", "gerade eben"
 ```
 
 Page layout (server component, `export const revalidate = 30` not usable with dynamic db → use `dynamic = 'force-dynamic'` + client refresh):
-- Header: „Wo ist meine Porta?" + einzeiler „Live-Verfügbarkeit der Midea PortaSplit in Österreich".
-- Two variant sections side-by-side (grid, stacks on mobile): variant name, UVP, then a `StatusCard` per retailer: colored status dot + „Bestellbar"/„Ausverkauft"/„Status unbekannt", price, „Zum Shop →" link (rel=nofollow, target _blank), „geprüft vor X Min".
+
+- Header: „Wo is meine Porta?" + einzeiler „Live-Verfügbarkeit der Midea PortaSplit in Österreich".
+- Two variant sections side-by-side (grid, stacks on mobile): variant name, UVP, then a `StatusCard` per retailer: colored status dot + „Bestellbar"/„Ausverkauft"/„Status unbekannt", price, „Zum Shop →" link (rel=nofollow, target \_blank), „geprüft vor X Min".
 - `<SubscribePanel />` between sections and store finder.
 - `StoreFinder` (client): PLZ input + radius select (10/25/50/100 km) + variant toggle → fetches `/api/stores?zip=&radius=&variant=` → table of stores (chain, name, distance, status dot). Empty state: „Keine Filiale mit Bestand gefunden 😞".
 - `EventFeed`: last 30 events as timeline lines, e.g. „🟢 BAUHAUS: PortaSplit wieder bestellbar — vor 12 Min".
@@ -621,10 +766,12 @@ Page layout (server component, `export const revalidate = 30` not usable with dy
 ### Task 14: PWA + subscribe UI
 
 **Files:**
+
 - Create: `public/sw.js`, `public/manifest.webmanifest`, `src/components/SubscribePanel.tsx` (replaces stub), `src/app/api/push-key/route.ts`, `public/icon-192.png`, `public/icon-512.png` (generate simple AC-unit emoji-on-gradient PNGs via a small script or ImageMagick)
 - Modify: `src/app/layout.tsx` (manifest link, theme color)
 
 **Interfaces:**
+
 - Consumes: `POST/DELETE /api/subscribe/push` (Task 9), `POST /api/subscribe/email` (Task 10), `GET /api/push-key` → `{ publicKey: VAPID_PUBLIC_KEY }`.
 
 - [ ] **Step 1:** `sw.js`: `push` event → `self.registration.showNotification(data.title, { body, data: { url }, icon: '/icon-192.png' })`; `notificationclick` → `clients.openWindow(event.notification.data.url)`.
@@ -637,6 +784,7 @@ Page layout (server component, `export const revalidate = 30` not usable with dy
 ### Task 15: Legal pages, Dockerfile, README, deploy
 
 **Files:**
+
 - Create: `src/app/impressum/page.tsx`, `src/app/datenschutz/page.tsx`, `Dockerfile`, `.dockerignore`, `README.md`
 
 **Interfaces:** none downstream.

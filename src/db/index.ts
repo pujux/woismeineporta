@@ -8,9 +8,7 @@ import fs from "node:fs";
 export type AppDb = DataSource;
 export * from "./entities";
 
-export async function createDb(
-  dbPath = process.env.DATABASE_PATH ?? "./data/app.db",
-): Promise<AppDb> {
+export async function createDb(dbPath = process.env.DATABASE_PATH ?? "./data/app.db"): Promise<AppDb> {
   if (dbPath !== ":memory:") {
     fs.mkdirSync(path.dirname(dbPath), { recursive: true });
   }
@@ -31,6 +29,6 @@ export async function createDb(
 let singleton: Promise<AppDb> | undefined;
 
 export function getDb(): Promise<AppDb> {
-  if (!singleton) singleton = createDb();
+  singleton ??= createDb();
   return singleton;
 }

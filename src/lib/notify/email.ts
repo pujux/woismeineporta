@@ -10,7 +10,7 @@ let resend: Resend | undefined;
 const defaultSend: SendFn = async (to, subject, html) => {
   resend ??= new Resend(process.env.RESEND_API_KEY);
   const { error } = await resend.emails.send({
-    from: process.env.EMAIL_FROM ?? "Wo ist meine Porta? <onboarding@resend.dev>",
+    from: process.env.EMAIL_FROM ?? "Wo is meine Porta? <onboarding@resend.dev>",
     to,
     subject,
     html,
@@ -128,11 +128,7 @@ export async function sendAlertEmail(
   if (!row) return "failed";
   const unsubscribeUrl = `${baseUrl()}/api/subscribe/email/unsubscribe?token=${row.unsubscribeToken}`;
   try {
-    await send(
-      row.email,
-      subject,
-      `${html}<p style="color:#888;font-size:12px"><a href="${unsubscribeUrl}">Alarm abbestellen</a></p>`,
-    );
+    await send(row.email, subject, `${html}<p style="color:#888;font-size:12px"><a href="${unsubscribeUrl}">Alarm abbestellen</a></p>`);
     return "sent";
   } catch (err) {
     console.error(`alert mail failed for #${subscriptionId}:`, err);

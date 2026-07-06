@@ -170,11 +170,16 @@ export function SubscribePanel() {
             setStoreAlert((s) => !s);
           }}
         >
-          {storeAlert ? "▾" : "▸"} Auch bei Filialen in meiner Nähe melden (optional)
+          {storeAlert ? "▾" : "▸"} Zusätzlich Filialen in der Nähe (optional)
         </summary>
         {storeAlert && (
-          <div className="mt-2 flex items-center gap-2">
-            <input
+          <>
+            <p className="mt-2 text-xs text-slate-500 dark:text-slate-400">
+              Online-Restocks bekommst du ohnehin. Mit einer PLZ melden wir dir
+              <em> zusätzlich</em>, sobald ein Markt im Umkreis eine lagernd hat.
+            </p>
+            <div className="mt-2 flex items-center gap-2">
+              <input
               value={zip}
               onChange={(e) => setZip(e.target.value.replace(/\D/g, "").slice(0, 4))}
               inputMode="numeric"
@@ -194,7 +199,8 @@ export function SubscribePanel() {
                 </option>
               ))}
             </select>
-          </div>
+            </div>
+          </>
         )}
       </details>
 

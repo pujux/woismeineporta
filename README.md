@@ -1,4 +1,4 @@
-# Wo ist meine Porta? 🌬️
+# Wo is meine Porta?
 
 Verfügbarkeits-Tracker für die **Midea PortaSplit** und **PortaSplit Cool** in Österreich —
 inspiriert von bestell.bar, aber für genau ein Produkt. Prüft österreichische Händler im
@@ -11,12 +11,12 @@ SQLite auf einem Volume — keine weiteren Dienste nötig.
 
 ## Händler-Abdeckung
 
-| Händler | Online-Status | Filial-Bestand |
-|---|---|---|
-| OBI | ✓ | ✓ (79 Märkte, exakte Verfügbarkeit) |
-| MediaMarkt | ✓ | nur Sammelsignal („in einzelnen Märkten abholbar") |
-| Tepto | ✓ (nur PortaSplit) | — |
-| BAUHAUS | best effort (Cloudflare-blockiert → „Status unbekannt") | — |
+| Händler    | Online-Status                                           | Filial-Bestand                                     |
+| ---------- | ------------------------------------------------------- | -------------------------------------------------- |
+| OBI        | ✓                                                       | ✓ (79 Märkte, exakte Verfügbarkeit)                |
+| MediaMarkt | ✓                                                       | nur Sammelsignal („in einzelnen Märkten abholbar") |
+| Tepto      | ✓ (nur PortaSplit)                                      | —                                                  |
+| BAUHAUS    | best effort (Cloudflare-blockiert → „Status unbekannt") | —                                                  |
 
 Details und Endpoints: [docs/retailers.md](docs/retailers.md).
 
@@ -50,15 +50,15 @@ curl -X POST -H "Authorization: Bearer $ADMIN_SECRET" http://localhost:3000/api/
 
 ## Umgebungsvariablen
 
-| Variable | Zweck |
-|---|---|
-| `DATABASE_PATH` | SQLite-Datei (Container: `/data/app.db`) |
-| `ENABLE_POLLER` | `1` = Verfügbarkeits-Poller läuft im Prozess |
-| `POLL_FAST_MS` / `POLL_SLOW_MS` | Intervalle (Default 30.000 / 180.000 ms) |
-| `ADMIN_SECRET` | Bearer-Token für `POST /api/admin/check` |
-| `VAPID_PUBLIC_KEY` / `VAPID_PRIVATE_KEY` / `VAPID_SUBJECT` | Web Push (`npx web-push generate-vapid-keys`; Subject = `mailto:…`) |
-| `RESEND_API_KEY` / `EMAIL_FROM` | E-Mail-Alarme via [Resend](https://resend.com) (Domain verifizieren, Free-Tier: 100 Mails/Tag) |
-| `PUBLIC_BASE_URL` | Öffentliche URL, wird in E-Mail-Links verwendet |
+| Variable                                                   | Zweck                                                                                          |
+| ---------------------------------------------------------- | ---------------------------------------------------------------------------------------------- |
+| `DATABASE_PATH`                                            | SQLite-Datei (Container: `/data/app.db`)                                                       |
+| `ENABLE_POLLER`                                            | `1` = Verfügbarkeits-Poller läuft im Prozess                                                   |
+| `POLL_FAST_MS` / `POLL_SLOW_MS`                            | Intervalle (Default 30.000 / 180.000 ms)                                                       |
+| `ADMIN_SECRET`                                             | Bearer-Token für `POST /api/admin/check`                                                       |
+| `VAPID_PUBLIC_KEY` / `VAPID_PRIVATE_KEY` / `VAPID_SUBJECT` | Web Push (`npx web-push generate-vapid-keys`; Subject = `mailto:…`)                            |
+| `RESEND_API_KEY` / `EMAIL_FROM`                            | E-Mail-Alarme via [Resend](https://resend.com) (Domain verifizieren, Free-Tier: 100 Mails/Tag) |
+| `PUBLIC_BASE_URL`                                          | Öffentliche URL, wird in E-Mail-Links verwendet                                                |
 
 ## Deployment auf Dokploy
 

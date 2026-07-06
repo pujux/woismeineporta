@@ -9,7 +9,7 @@ const geistSans = Geist({
 });
 
 export const metadata: Metadata = {
-  title: "Wo ist meine Porta? — Midea PortaSplit Verfügbarkeit Österreich",
+  title: "Wo is meine Porta? — Midea PortaSplit Verfügbarkeit Österreich",
   description:
     "Live-Verfügbarkeit der Midea PortaSplit und PortaSplit Cool bei österreichischen Händlern — mit Sofort-Alarm per Push oder E-Mail, sobald sie wieder bestellbar ist.",
   manifest: "/manifest.webmanifest",
@@ -32,10 +32,7 @@ export default function RootLayout({
       <body className="min-h-screen bg-slate-50 font-sans text-slate-900 dark:bg-slate-950 dark:text-slate-100">
         {children}
         <footer className="mx-auto mt-16 max-w-3xl border-t border-slate-200 px-4 py-8 text-xs text-slate-400 dark:border-slate-800 dark:text-slate-500">
-          <p>
-            Kein Shop — wir beobachten nur Verfügbarkeiten und verlinken zu den Händlern. Alle
-            Angaben ohne Gewähr, Preise können abweichen.
-          </p>
+          <p>Kein Shop — wir beobachten nur Verfügbarkeiten und verlinken zu den Händlern. Alle Angaben ohne Gewähr, Preise können abweichen.</p>
           <p className="mt-2">
             PLZ-Daten:{" "}
             <a className="underline hover:text-slate-600 dark:hover:text-slate-300" href="https://www.geonames.org/" rel="noopener">

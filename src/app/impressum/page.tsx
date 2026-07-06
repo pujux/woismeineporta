@@ -1,6 +1,6 @@
 import type { Metadata } from "next";
 
-export const metadata: Metadata = { title: "Impressum — Wo ist meine Porta?" };
+export const metadata: Metadata = { title: "Impressum — Wo is meine Porta?" };
 
 export default function Impressum() {
   return (
@@ -18,9 +18,8 @@ export default function Impressum() {
           E-Mail: [kontakt@woismeineporta.at]
         </p>
         <p className="mt-4">
-          Unternehmensgegenstand: Unentgeltlicher Informationsdienst zur Produktverfügbarkeit.
-          Diese Website ist kein Online-Shop und steht in keiner Verbindung zu Midea, BAUHAUS,
-          OBI, MediaMarkt oder Tepto. Alle Marken sind Eigentum ihrer jeweiligen Inhaber.
+          Unternehmensgegenstand: Unentgeltlicher Informationsdienst zur Produktverfügbarkeit. Diese Website ist kein Online-Shop und steht in keiner
+          Verbindung zu Midea, BAUHAUS, OBI, MediaMarkt oder Tepto. Alle Marken sind Eigentum ihrer jeweiligen Inhaber.
         </p>
       </div>
     </main>
