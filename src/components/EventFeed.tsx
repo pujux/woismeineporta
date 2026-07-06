@@ -169,7 +169,10 @@ export function EventFeed({ events, now }: Readonly<{ events: FeedEvent[]; now: 
                 </>
               );
               return (
-                <li key={event.createdAt} className="relative flex items-start gap-3">
+                <li
+                  key={`${event.createdAt}-${event.type}-${event.retailerName}-${event.variantName}-${event.storeName ?? ""}`}
+                  className="relative flex items-start gap-3"
+                >
                   <span className={`relative z-10 mt-0.5 flex h-7 w-7 shrink-0 items-center justify-center rounded-full text-white ${m.circle}`}>
                     {m.icon}
                   </span>

@@ -121,7 +121,10 @@ export function StoreFinder() {
           ) : (
             <ul className="divide-y divide-slate-100 overflow-hidden rounded-xl border border-slate-200 bg-white shadow-sm dark:divide-slate-800 dark:border-slate-800 dark:bg-slate-900">
               {stores.map((s) => (
-                <li key={s.name} className="flex items-center gap-3 px-4 py-2.5 text-sm">
+                <li
+                  key={`${s.retailerName}-${s.zip}-${s.name}`}
+                  className="flex items-center gap-3 px-4 py-2.5 text-sm"
+                >
                   <span className={`h-2.5 w-2.5 shrink-0 rounded-full ${s.inStock ? "animate-pulse-dot bg-green-500" : "bg-red-400"}`} aria-hidden />
                   <div className="min-w-0">
                     <span className="font-medium text-slate-900 dark:text-slate-100">
