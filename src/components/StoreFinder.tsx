@@ -87,13 +87,14 @@ export function StoreFinder() {
         >
           {loading ? "Suche…" : "Filialen suchen"}
         </button>
-        {mode === "none" && (
+        {mode !== "all" && (
           <button
             type="button"
             onClick={showAll}
-            className="text-sm text-sky-700 underline hover:text-sky-800 dark:text-sky-400 dark:hover:text-sky-300"
+            disabled={loading}
+            className="text-sm text-sky-700 underline hover:text-sky-800 disabled:opacity-50 dark:text-sky-400 dark:hover:text-sky-300"
           >
-            oder alle auf der Karte zeigen
+            {mode === "search" ? "alle Filialen anzeigen" : "oder alle auf der Karte zeigen"}
           </button>
         )}
       </form>
