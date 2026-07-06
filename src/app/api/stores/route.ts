@@ -1,6 +1,7 @@
 import { NextResponse } from "next/server";
 import { getDb } from "@/db";
-import { findStoresNear } from "@/lib/queries";
+import { plzToLatLng } from "@/lib/geo";
+import { findStoresNear, listAllStores } from "@/lib/queries";
 import { VARIANT_SLUGS } from "@/lib/variants";
 import type { VariantSlug } from "@/lib/retailers/types";
 
@@ -14,9 +15,15 @@ export async function GET(request: Request) {
       ? (variantParam as VariantSlug)
       : undefined;
 
-  if (!/^\d{4}$/.test(zip)) {
+  // Without a ZIP: full store list for the map view.
+  if (!zip) {
+    const stores = await listAllStores(await getDb(), variant);
+    return NextResponse.json({ stores, center: null, radiusKm: null });
+  }
+
+  if (!/^\d{4}$/.test(zip) || !plzToLatLng(zip)) {
     return NextResponse.json({ error: "PLZ ungültig" }, { status: 400 });
   }
   const stores = await findStoresNear(await getDb(), zip, radius, variant);
-  return NextResponse.json({ stores });
+  return NextResponse.json({ stores, center: plzToLatLng(zip), radiusKm: radius });
 }

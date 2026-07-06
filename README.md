@@ -20,6 +20,9 @@ SQLite auf einem Volume — keine weiteren Dienste nötig.
 
 Details und Endpoints: [docs/retailers.md](docs/retailers.md).
 
+Die Filialkarte (Leaflet + OpenStreetMap-Kacheln, kein API-Key nötig) zeigt alle Märkte mit
+Verfügbarkeitsstatus; eine PLZ-Suche zoomt auf den Umkreis.
+
 ## Entwicklung
 
 ```bash

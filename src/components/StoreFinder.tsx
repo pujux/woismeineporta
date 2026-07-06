@@ -1,7 +1,8 @@
 "use client";
 
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import type { NearbyStore } from "@/lib/queries";
+import { StoreMap, type MapFocus } from "./StoreMap";
 
 const RADII = [10, 25, 50, 100] as const;
 
@@ -11,9 +12,19 @@ const INPUT_CLASSES =
 export function StoreFinder() {
   const [zip, setZip] = useState("");
   const [radius, setRadius] = useState<number>(50);
-  const [stores, setStores] = useState<NearbyStore[] | null>(null);
+  const [stores, setStores] = useState<NearbyStore[]>([]);
+  const [focus, setFocus] = useState<MapFocus | null>(null);
+  const [searched, setSearched] = useState(false);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
+
+  // initial load: every store on the map
+  useEffect(() => {
+    fetch("/api/stores")
+      .then((r) => r.json())
+      .then((d) => setStores(d.stores ?? []))
+      .catch(() => {});
+  }, []);
 
   async function search(e: React.FormEvent) {
     e.preventDefault();
@@ -26,13 +37,27 @@ export function StoreFinder() {
     try {
       const res = await fetch(`/api/stores?zip=${zip}&radius=${radius}`);
       if (!res.ok) throw new Error();
-      setStores((await res.json()).stores);
+      const d = await res.json();
+      setStores(d.stores);
+      setFocus(d.center ? { center: d.center, radiusKm: d.radiusKm } : null);
+      setSearched(true);
     } catch {
       setError("Suche fehlgeschlagen — bitte später nochmal versuchen.");
     } finally {
       setLoading(false);
     }
   }
+
+  async function resetSearch() {
+    setSearched(false);
+    setFocus(null);
+    setZip("");
+    setError(null);
+    const d = await fetch("/api/stores").then((r) => r.json());
+    setStores(d.stores ?? []);
+  }
+
+  const inStockCount = stores.filter((s) => s.inStock).length;
 
   return (
     <div>
@@ -64,10 +89,36 @@ export function StoreFinder() {
         >
           {loading ? "Suche…" : "Filialen suchen"}
         </button>
+        {searched && (
+          <button
+            type="button"
+            onClick={resetSearch}
+            className="text-sm text-slate-500 underline hover:text-slate-700 dark:text-slate-400 dark:hover:text-slate-200"
+          >
+            Alle anzeigen
+          </button>
+        )}
       </form>
       {error && <p className="mt-2 text-sm text-red-600 dark:text-red-400">{error}</p>}
 
-      {stores !== null && !error && (
+      <div className="mt-4">
+        <StoreMap stores={stores} focus={focus} />
+        <p className="mt-2 text-xs text-slate-400 dark:text-slate-500">
+          {stores.length} Filialen
+          {inStockCount > 0 ? (
+            <span className="font-medium text-green-700 dark:text-green-400">
+              {" "}
+              — {inStockCount} davon lagernd 🟢
+            </span>
+          ) : (
+            " — derzeit keine lagernd"
+          )}
+          . Filialdaten derzeit von OBI; BAUHAUS &amp; MediaMarkt geben keine Filialdaten für
+          Server frei.
+        </p>
+      </div>
+
+      {searched && (
         <div className="mt-4">
           {stores.length === 0 ? (
             <p className="text-sm text-slate-500 dark:text-slate-400">
@@ -89,9 +140,11 @@ export function StoreFinder() {
                       {s.zip} {s.city}
                     </span>
                   </div>
-                  <span className="ml-auto shrink-0 tabular-nums text-slate-500 dark:text-slate-400">
-                    {s.distanceKm.toFixed(0)} km
-                  </span>
+                  {s.distanceKm !== null && (
+                    <span className="ml-auto shrink-0 tabular-nums text-slate-500 dark:text-slate-400">
+                      {s.distanceKm.toFixed(0)} km
+                    </span>
+                  )}
                   <span
                     className={`w-24 shrink-0 text-right text-xs font-medium ${s.inStock ? "text-green-700 dark:text-green-400" : "text-red-500 dark:text-red-400"}`}
                   >
@@ -101,10 +154,6 @@ export function StoreFinder() {
               ))}
             </ul>
           )}
-          <p className="mt-2 text-xs text-slate-400 dark:text-slate-500">
-            Filialdaten derzeit von OBI (79 Märkte). BAUHAUS &amp; MediaMarkt geben keine
-            Filialdaten für Server frei.
-          </p>
         </div>
       )}
     </div>

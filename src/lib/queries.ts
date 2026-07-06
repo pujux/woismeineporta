@@ -94,9 +94,45 @@ export interface NearbyStore {
   name: string;
   zip: string;
   city: string;
-  distanceKm: number;
+  lat: number;
+  lng: number;
+  distanceKm: number | null;
   inStock: boolean;
   lastCheckedAt: number;
+}
+
+/** All stores with availability data, no location filter (map view). */
+export async function listAllStores(db: AppDb, variant?: VariantSlug): Promise<NearbyStore[]> {
+  const stores = await db.getRepository(StoreEntity).find();
+  const retailers = new Map(
+    (await db.getRepository(RetailerEntity).find()).map((r) => [r.slug, r.name]),
+  );
+  const availability = await db.getRepository(StoreAvailabilityEntity).find();
+
+  const byStore = new Map<number, { inStock: boolean; lastCheckedAt: number }>();
+  for (const a of availability) {
+    if (variant && a.variantSlug !== variant) continue;
+    const existing = byStore.get(a.storeId);
+    byStore.set(a.storeId, {
+      inStock: (existing?.inStock ?? false) || a.inStock,
+      lastCheckedAt: Math.max(existing?.lastCheckedAt ?? 0, a.lastCheckedAt),
+    });
+  }
+
+  return stores
+    .filter((s) => byStore.has(s.id))
+    .map((s) => ({
+      retailerName: retailers.get(s.retailerSlug) ?? s.retailerSlug,
+      name: s.name,
+      zip: s.zip,
+      city: s.city,
+      lat: s.latE6 / 1e6,
+      lng: s.lngE6 / 1e6,
+      distanceKm: null,
+      inStock: byStore.get(s.id)!.inStock,
+      lastCheckedAt: byStore.get(s.id)!.lastCheckedAt,
+    }))
+    .sort((a, b) => Number(b.inStock) - Number(a.inStock) || a.zip.localeCompare(b.zip));
 }
 
 export async function findStoresNear(
@@ -131,10 +167,14 @@ export async function findStoresNear(
       name: s.name,
       zip: s.zip,
       city: s.city,
+      lat: s.latE6 / 1e6,
+      lng: s.lngE6 / 1e6,
       distanceKm: distanceKm(home.lat, home.lng, s.latE6 / 1e6, s.lngE6 / 1e6),
       inStock: byStore.get(s.id)!.inStock,
       lastCheckedAt: byStore.get(s.id)!.lastCheckedAt,
     }))
-    .filter((s) => s.distanceKm <= radiusKm)
-    .sort((a, b) => Number(b.inStock) - Number(a.inStock) || a.distanceKm - b.distanceKm);
+    .filter((s) => s.distanceKm! <= radiusKm)
+    .sort(
+      (a, b) => Number(b.inStock) - Number(a.inStock) || a.distanceKm! - b.distanceKm!,
+    );
 }

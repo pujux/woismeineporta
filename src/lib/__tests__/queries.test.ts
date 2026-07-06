@@ -1,7 +1,7 @@
 import { beforeEach, describe, expect, it } from "vitest";
 import { EventEntity, OfferEntity, StoreAvailabilityEntity, StoreEntity, type AppDb } from "@/db";
 import { createTestDb } from "@/db/test-utils";
-import { findStoresNear, getRecentEvents, getVariantStatuses } from "@/lib/queries";
+import { findStoresNear, getRecentEvents, getVariantStatuses, listAllStores } from "@/lib/queries";
 
 describe("queries", () => {
   let db: AppDb;
@@ -76,6 +76,15 @@ describe("queries", () => {
     expect(wide[0].inStock).toBe(true); // in-stock first even though both within radius
 
     expect(await findStoresNear(db, "0000", 50)).toEqual([]);
+  });
+
+  it("listAllStores returns every store with coordinates, in-stock first", async () => {
+    const all = await listAllStores(db);
+    expect(all).toHaveLength(2);
+    expect(all[0]).toMatchObject({ name: "Wien 10", inStock: true, distanceKm: null });
+    expect(all[0].lat).toBeCloseTo(48.18, 2);
+    expect(all[0].lng).toBeCloseTo(16.36, 2);
+    expect(all[1].inStock).toBe(false);
   });
 
   it("findStoresNear can filter by variant", async () => {

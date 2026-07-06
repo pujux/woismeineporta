@@ -55,6 +55,19 @@ export default function Datenschutz() {
         </section>
 
         <section>
+          <h2 className="font-semibold text-slate-900 dark:text-slate-100">Kartendarstellung (OpenStreetMap)</h2>
+          <p>
+            Für die Filialkarte laden wir Kartenkacheln von OpenStreetMap (OpenStreetMap
+            Foundation, UK). Dabei wird deine IP-Adresse technisch bedingt an deren Server
+            übertragen (Art. 6 Abs. 1 lit. f DSGVO — Darstellung der Karte). Details:{" "}
+            <a className="underline" href="https://wiki.osmfoundation.org/wiki/Privacy_Policy" rel="noopener">
+              OSMF Privacy Policy
+            </a>
+            .
+          </p>
+        </section>
+
+        <section>
           <h2 className="font-semibold text-slate-900 dark:text-slate-100">Hosting</h2>
           <p>Die Website wird auf eigener Infrastruktur in der EU betrieben.</p>
         </section>
