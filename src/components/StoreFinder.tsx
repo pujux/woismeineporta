@@ -68,7 +68,12 @@ export function StoreFinder() {
           aria-describedby={error ? "plz-error" : undefined}
           className={`w-32 ${INPUT_CLASSES}`}
         />
-        <select value={radius} onChange={(e) => setRadius(Number(e.target.value))} aria-label="Umkreis" className={INPUT_CLASSES}>
+        <select
+          value={radius}
+          onChange={(e) => setRadius(Number(e.target.value))}
+          aria-label="Umkreis"
+          className={`${INPUT_CLASSES} select-chevron appearance-none pr-9`}
+        >
           {RADII.map((r) => (
             <option key={r} value={r}>
               {r} km

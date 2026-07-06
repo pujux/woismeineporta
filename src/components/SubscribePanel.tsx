@@ -177,7 +177,7 @@ export function SubscribePanel() {
                 value={radiusKm}
                 onChange={(e) => setRadiusKm(Number(e.target.value))}
                 aria-label="Radius für Filial-Alarm"
-                className={INPUT_CLASSES}
+                className={`${INPUT_CLASSES} select-chevron appearance-none pr-9`}
               >
                 {RADII.map((r) => (
                   <option key={r} value={r}>
