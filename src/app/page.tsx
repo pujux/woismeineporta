@@ -27,9 +27,15 @@ export default async function Home() {
           <span className="bg-linear-to-r from-sky-500 to-sky-700 bg-clip-text text-transparent dark:from-sky-400 dark:to-sky-600">Porta</span>?
         </h1>
         <p className="mt-3 max-w-xl text-slate-600 dark:text-slate-400">
-          {anyInStock
-            ? "🎉 Es gibt gerade welche — schnell sein!"
-            : "Die Midea PortaSplit ist überall ausverkauft. Wir schauen für dich nach — pausenlos."}
+          {anyInStock ? (
+            <span>🎉 Es gibt gerade welche — schnell sein!</span>
+          ) : (
+            <span>
+              Die Midea PortaSplit ist überall ausverkauft.
+              <br />
+              Wir schauen für dich nach — pausenlos.
+            </span>
+          )}
         </p>
       </header>
 
