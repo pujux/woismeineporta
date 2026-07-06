@@ -8,6 +8,30 @@ export function formatPrice(cents: number | null): string {
   );
 }
 
+// Pinned to Europe/Vienna so server (UTC container) and client render the same
+// Austrian local time — avoids hydration mismatch and shows the right clock.
+const DATE_TIME_FMT = new Intl.DateTimeFormat("de-AT", {
+  timeZone: "Europe/Vienna",
+  day: "2-digit",
+  month: "2-digit",
+  year: "2-digit",
+  hour: "2-digit",
+  minute: "2-digit",
+});
+
+export function formatDateTime(ts: number): string {
+  return `${DATE_TIME_FMT.format(new Date(ts))} Uhr`;
+}
+
+export function formatDuration(ms: number): string {
+  const min = Math.round(ms / 60_000);
+  if (min < 1) return "unter 1 Min";
+  if (min < 60) return `${min} Min`;
+  const h = Math.floor(min / 60);
+  const m = min % 60;
+  return m ? `${h} Std ${m} Min` : `${h} Std`;
+}
+
 export function formatRelativeTime(ts: number, now: number): string {
   const diffMin = Math.floor((now - ts) / 60_000);
   if (diffMin < 1) return "gerade eben";

@@ -11,7 +11,10 @@ export const dynamic = "force-dynamic";
 
 export default async function Home() {
   const db = await getDb();
-  const [statuses, events] = await Promise.all([getVariantStatuses(db), getRecentEvents(db)]);
+  const [statuses, events] = await Promise.all([
+    getVariantStatuses(db),
+    getRecentEvents(db, 60),
+  ]);
   const now = Date.now();
   const anyInStock = statuses.some((s) => s.offers.some((o) => o.status === "in_stock"));
 
@@ -74,7 +77,7 @@ export default async function Home() {
       </section>
 
       <section className="mt-12">
-        <h2 className="mb-4 text-lg font-semibold">Verlauf</h2>
+        <h2 className="mb-4 text-lg font-semibold">Online Updates</h2>
         <EventFeed events={events} now={now} />
       </section>
     </main>
