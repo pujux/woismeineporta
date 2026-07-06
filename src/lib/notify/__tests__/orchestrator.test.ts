@@ -1,6 +1,5 @@
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import {
-  createDb,
   EmailSubscriptionEntity,
   NotificationLogEntity,
   OfferEntity,
@@ -8,6 +7,7 @@ import {
   StoreEntity,
   type AppDb,
 } from "@/db";
+import { createTestDb } from "@/db/test-utils";
 import { notifyEvents } from "@/lib/notify/orchestrator";
 import type { StockEvent } from "@/lib/diff";
 
@@ -50,7 +50,7 @@ describe("notifyEvents", () => {
   }
 
   beforeEach(async () => {
-    db = await createDb(":memory:");
+    db = await createTestDb();
     push.mockClear();
     email.mockClear();
     await db.getRepository(OfferEntity).insert({

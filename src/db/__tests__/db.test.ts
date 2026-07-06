@@ -17,6 +17,7 @@ describe("createDb", () => {
   it("roundtrips an offer row", async () => {
     const db = await createDb(":memory:");
     const repo = db.getRepository(OfferEntity);
+    await repo.clear();
     await repo.insert({
       retailerSlug: "bauhaus",
       variantSlug: "portasplit",

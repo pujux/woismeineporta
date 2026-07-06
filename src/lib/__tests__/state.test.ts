@@ -1,5 +1,6 @@
 import { beforeEach, describe, expect, it } from "vitest";
-import { createDb, EventEntity, OfferEntity, StoreAvailabilityEntity, StoreEntity, type AppDb } from "@/db";
+import { EventEntity, OfferEntity, StoreAvailabilityEntity, StoreEntity, type AppDb } from "@/db";
+import { createTestDb } from "@/db/test-utils";
 import { computeDiff } from "@/lib/diff";
 import { loadPrevState, markUnknown, persistResult } from "@/lib/state";
 import type { RetailerResult } from "@/lib/retailers/types";
@@ -27,7 +28,7 @@ const RESULT: RetailerResult = {
 describe("state persistence", () => {
   let db: AppDb;
   beforeEach(async () => {
-    db = await createDb(":memory:");
+    db = await createTestDb();
   });
 
   it("persists a result and reflects it in loadPrevState", async () => {

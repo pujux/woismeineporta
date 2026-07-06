@@ -1,5 +1,6 @@
 import { beforeEach, describe, expect, it, vi } from "vitest";
-import { createDb, CheckRunEntity, OfferEntity, type AppDb } from "@/db";
+import { CheckRunEntity, OfferEntity, type AppDb } from "@/db";
+import { createTestDb } from "@/db/test-utils";
 import { AdapterHttpError } from "@/lib/retailers/fetch";
 import type { RetailerAdapter, RetailerResult } from "@/lib/retailers/types";
 import { createPollerState, runTick } from "@/lib/poller";
@@ -25,7 +26,7 @@ describe("runTick", () => {
   const notify = vi.fn().mockResolvedValue({ pushed: 0, emailed: 0 });
 
   beforeEach(async () => {
-    db = await createDb(":memory:");
+    db = await createTestDb();
     notify.mockClear();
   });
 
