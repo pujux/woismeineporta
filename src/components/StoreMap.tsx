@@ -76,6 +76,7 @@ export function StoreMap({ stores, focus }: Readonly<{ stores: NearbyStore[]; fo
           fillColor: "#0ea5e9",
           fillOpacity: 0.06,
           dashArray: "4 6",
+          interactive: false, // don't let the radius overlay swallow marker clicks
         }).addTo(map);
         map.fitBounds(radiusRef.current.getBounds(), { padding: [20, 20] });
       } else {
