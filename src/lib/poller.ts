@@ -1,6 +1,7 @@
 import { CheckRunEntity, EventEntity, type AppDb } from "@/db";
 import { getDb } from "@/db";
 import { computeDiff } from "./diff";
+import { emitChange } from "./live-bus";
 import { notifyEvents } from "./notify/orchestrator";
 import { AdapterHttpError } from "./retailers/fetch";
 import { impitFetch } from "./retailers/impit-fetch";
@@ -102,6 +103,10 @@ export async function runTick(db: AppDb, opts: TickOptions): Promise<TickSummary
     durationMs: summary.durationMs,
     summary: JSON.stringify(summary),
   });
+
+  // Nudge connected browsers to refresh — but only when something actually
+  // changed. Timestamps tick client-side, so an unchanged tick needs no refresh.
+  if (summary.events > 0) emitChange();
 
   if (++tickCounter % HOUSEKEEPING_EVERY === 0) {
     await db

@@ -117,6 +117,25 @@ describe("runTick", () => {
     expect((await runTick(db, { ...opts, now: 221_000 })).ran).toEqual(["obi"]); // normal 30s cadence again
   });
 
+  it("emits a live-bus change only when a tick produces events", async () => {
+    const { liveBus } = await import("@/lib/live-bus");
+    const state = createPollerState();
+    const adapter = fakeAdapter("obi", "fast");
+    const opts = { adapterList: [adapter], notify, state, fastMs: 30_000, slowMs: 180_000 };
+
+    let fired = 0;
+    const onChange = () => fired++;
+    liveBus.on("change", onChange);
+
+    await runTick(db, { ...opts, now: 1000 }); // unseen -> in_stock: online_restock event
+    expect(fired).toBe(1);
+
+    await runTick(db, { ...opts, now: 40_000 }); // same in_stock/price: no event
+    expect(fired).toBe(1);
+
+    liveBus.off("change", onChange);
+  });
+
   it("writes a check_runs row per tick", async () => {
     await runTick(db, { adapterList: [fakeAdapter("obi", "fast")], notify, state: createPollerState(), now: 1000, fastMs: 30_000, slowMs: 180_000 });
     const runs = await db.getRepository(CheckRunEntity).find();

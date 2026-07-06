@@ -23,6 +23,14 @@ Details und Endpoints: [docs/retailers.md](docs/retailers.md).
 Die Filialkarte (Leaflet + OpenStreetMap-Kacheln, kein API-Key nötig) zeigt alle Märkte mit
 Verfügbarkeitsstatus; eine PLZ-Suche zoomt auf den Umkreis.
 
+**Live-Updates:** Statt Polling hält der Client eine Server-Sent-Events-Verbindung
+(`/api/live`). Der Poller sendet über einen In-Process-Bus (`src/lib/live-bus.ts`) nur dann
+ein `change`-Event, wenn ein Tick echte Statusänderungen produziert — dann aktualisiert der
+Client sofort per `router.refresh()`. Zwischen Änderungen fällt weder Server-Render- noch
+Payload-Last an (nur SSE-Heartbeats). Relative Zeitstempel („vor 3 Min geprüft") tickt der
+Client selbst, unabhängig vom Refresh. Fällt SSE aus (Proxy), greift ein 2-Minuten-Fallback
+plus Refresh bei Tab-Fokus.
+
 ## Entwicklung
 
 ```bash
