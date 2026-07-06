@@ -30,7 +30,9 @@ export function StatusCard({
         </div>
         <p className="mt-0.5 truncate text-xs text-slate-500">
           {offer.pickupNote ? `${offer.pickupNote} · ` : ""}
-          geprüft {formatRelativeTime(offer.lastCheckedAt, now)}
+          {offer.lastCheckedAt === 0
+            ? "noch nicht geprüft"
+            : `geprüft ${formatRelativeTime(offer.lastCheckedAt, now)}`}
         </p>
       </div>
       <div className="shrink-0 text-right">
