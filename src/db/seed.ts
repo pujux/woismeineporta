@@ -13,7 +13,6 @@ export async function seed(db: DataSource): Promise<void> {
     [
       { slug: "bauhaus", name: "BAUHAUS", homepage: "https://www.bauhaus.at" },
       { slug: "obi", name: "OBI", homepage: "https://www.obi.at" },
-      { slug: "hornbach", name: "HORNBACH", homepage: "https://www.hornbach.at" },
       { slug: "mediamarkt", name: "MediaMarkt", homepage: "https://www.mediamarkt.at" },
       { slug: "tepto", name: "Tepto", homepage: "https://www.tepto.at" },
     ],

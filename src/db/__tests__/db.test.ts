@@ -6,11 +6,11 @@ describe("createDb", () => {
   it("seeds variants and retailers idempotently", async () => {
     const db = await createDb(":memory:");
     expect(await db.getRepository(VariantEntity).count()).toBe(2);
-    expect(await db.getRepository(RetailerEntity).count()).toBe(5);
+    expect(await db.getRepository(RetailerEntity).count()).toBe(4);
 
     await seed(db);
     expect(await db.getRepository(VariantEntity).count()).toBe(2);
-    expect(await db.getRepository(RetailerEntity).count()).toBe(5);
+    expect(await db.getRepository(RetailerEntity).count()).toBe(4);
     await db.destroy();
   });
 

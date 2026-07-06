@@ -37,11 +37,12 @@ Browser ──> Next.js pages (server-rendered from SQLite, 30s revalidate)
 
 | Retailer | Online status | Store-level | Method | Tier |
 |---|---|---|---|---|
-| Bauhaus.at | ✓ | ✓ | public store-availability JSON endpoint | fast (30s) |
-| Obi.at | ✓ | ✓ | public availability JSON endpoint | fast (30s) |
-| Hornbach.at | ✓ | ✓ | public article-availability JSON endpoint | fast (30s) |
-| MediaMarkt.at | ✓ | ✓ | GraphQL API (Akamai-protected — best effort) | slow (180s) |
-| Tepto.at | ✓ | — | HTML scrape of product page | slow (180s) |
+| Obi.at | ✓ | ✓ 79 Märkte, exakte Stückzahl | PDP JSON-LD + public stock JSON API | fast (30s) |
+| MediaMarkt.at | ✓ | aggregate pickup signal only | PDP HTML (JSON-LD + embedded state); per-store GraphQL is Akamai-blocked | slow (180s) |
+| Tepto.at | ✓ (base variant only) | — | PDP JSON-LD | slow (180s) |
+| Bauhaus.at | best effort | — | Cloudflare-blocked server-side; adapter degrades to `unknown` + deep link | slow (180s) |
+
+*(Revised after live discovery on 2026-07-06 — see `docs/retailers.md`. Hornbach dropped: does not sell the PortaSplit in Austria.)*
 
 Amazon is explicitly out of scope for v1 (hardest bot protection, low signal). Exact endpoint URLs/shapes are discovered during implementation by inspecting each site's network traffic (agent-browser); the spec commits to the adapter interface, not to endpoints. If a retailer blocks datacenter IPs, its adapter degrades to `unknown` and the site stays honest about staleness (shows "zuletzt geprüft" timestamps).
 
