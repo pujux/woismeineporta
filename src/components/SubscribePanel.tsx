@@ -88,7 +88,8 @@ export function SubscribePanel() {
         setPushState("denied");
       } else {
         setPushState("idle");
-        setPushError("Push konnte nicht aktiviert werden. " + String(err));
+        setPushError("Hat nicht geklappt — bitte versuch's nochmal.");
+        console.error("push subscribe failed:", err);
       }
     }
   }
@@ -130,13 +131,17 @@ export function SubscribePanel() {
   return (
     <div className="rounded-2xl border border-sky-200 bg-gradient-to-b from-sky-50 to-white p-5 shadow-sm dark:border-sky-900/60 dark:from-sky-950/60 dark:to-slate-900">
       <h2 className="text-lg font-semibold text-slate-900 dark:text-slate-100">
-        🔔 Sofort-Alarm, wenn&apos;s eine gibt
+        🔔 Keine PortaSplit mehr verpassen
       </h2>
       <p className="mt-1 text-sm text-slate-600 dark:text-slate-400">
-        Wir sagen dir binnen Sekunden Bescheid, sobald eine PortaSplit wieder bestellbar ist.
+        Sobald sie wieder bestellbar ist, bist du meist innerhalb einer Minute informiert — per
+        Push oder E-Mail. Kostenlos, jederzeit abbestellbar.
       </p>
 
-      <div className="mt-4 flex flex-wrap gap-4">
+      <p className="mt-4 mb-2 text-xs font-medium uppercase tracking-wide text-slate-500 dark:text-slate-400">
+        Für welche Modelle?
+      </p>
+      <div className="flex flex-wrap gap-4">
         {VARIANTS.map((v) => (
           <label
             key={v.slug}
@@ -165,8 +170,7 @@ export function SubscribePanel() {
             setStoreAlert((s) => !s);
           }}
         >
-          {storeAlert ? "▾" : "▸"} Filial-Alarm (optional): auch melden, wenn ein Markt in deiner
-          Nähe Bestand hat
+          {storeAlert ? "▾" : "▸"} Auch bei Filialen in meiner Nähe melden (optional)
         </summary>
         {storeAlert && (
           <div className="mt-2 flex items-center gap-2">
@@ -198,7 +202,9 @@ export function SubscribePanel() {
         {/* Primary path: Web Push */}
         {pushState === "subscribed" ? (
           <div className="text-sm">
-            <span className="font-medium text-green-700 dark:text-green-400">Push-Alarm aktiv ✓</span>
+            <span className="font-medium text-green-700 dark:text-green-400">
+              Push-Alarm ist aktiv — wir melden uns! ✓
+            </span>
             <button
               onClick={disablePush}
               className="ml-3 text-slate-500 underline hover:text-slate-700 dark:text-slate-400 dark:hover:text-slate-200"
@@ -213,7 +219,7 @@ export function SubscribePanel() {
           </p>
         ) : pushState === "unsupported" ? (
           <p className="text-sm text-slate-500 dark:text-slate-400">
-            Dein Browser unterstützt keine Push-Benachrichtigungen — nutz den E-Mail-Alarm unten.
+            Dein Browser kann keine Push-Nachrichten — nimm einfach den E-Mail-Alarm unten.
           </p>
         ) : (
           <button
@@ -253,12 +259,13 @@ export function SubscribePanel() {
             disabled={emailState === "sending"}
             className="rounded-lg border border-slate-300 px-3 py-2 text-sm font-medium text-slate-600 transition hover:bg-slate-100 disabled:opacity-50 dark:border-slate-700 dark:text-slate-300 dark:hover:bg-slate-800"
           >
-            {emailState === "sending" ? "…" : "Benachrichtigen"}
+            {emailState === "sending" ? "…" : "Aktivieren"}
           </button>
         </form>
         {emailState === "sent" && (
           <p className="mt-2 text-sm text-green-700 dark:text-green-400">
-            Bestätigungs-Mail verschickt — bitte Postfach checken (auch Spam). ✓
+            Fast geschafft! Wir haben dir eine Bestätigungs-Mail geschickt — kurz bestätigen (auch
+            im Spam-Ordner schauen), dann ist der Alarm scharf. ✓
           </p>
         )}
         {emailState === "error" && (
