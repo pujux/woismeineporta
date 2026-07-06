@@ -1,12 +1,4 @@
-import {
-  EmailSubscriptionEntity,
-  NotificationLogEntity,
-  OfferEntity,
-  PushSubscriptionEntity,
-  RetailerEntity,
-  StoreEntity,
-  type AppDb,
-} from "@/db";
+import { EmailSubscriptionEntity, NotificationLogEntity, OfferEntity, PushSubscriptionEntity, RetailerEntity, StoreEntity, type AppDb } from "@/db";
 import type { StockEvent } from "@/lib/diff";
 import { formatPrice } from "@/lib/format";
 import { distanceKm, plzToLatLng } from "@/lib/geo";
@@ -69,28 +61,17 @@ async function buildMessage(db: AppDb, event: StockEvent): Promise<Message | nul
   return null;
 }
 
-function matches(
-  message: Message,
-  sub: { variantSlugs: string; zip: string | null; radiusKm: number | null },
-): boolean {
+function matches(message: Message, sub: { variantSlugs: string; zip: string | null; radiusKm: number | null }): boolean {
   const variants: string[] = JSON.parse(sub.variantSlugs);
   if (!variants.includes(message.variantSlug)) return false;
   if (!message.storeGeo) return true; // online events go to everyone
   if (!sub.zip || !sub.radiusKm) return false; // store events need a location filter
   const home = plzToLatLng(sub.zip);
   if (!home) return false;
-  return (
-    distanceKm(home.lat, home.lng, message.storeGeo.lat, message.storeGeo.lng) <= sub.radiusKm
-  );
+  return distanceKm(home.lat, home.lng, message.storeGeo.lat, message.storeGeo.lng) <= sub.radiusKm;
 }
 
-async function underCooldown(
-  db: AppDb,
-  channel: "push" | "email",
-  subscriptionId: number,
-  dedupeKey: string,
-  now: number,
-): Promise<boolean> {
+async function underCooldown(db: AppDb, channel: "push" | "email", subscriptionId: number, dedupeKey: string, now: number): Promise<boolean> {
   const recent = await db
     .getRepository(NotificationLogEntity)
     .createQueryBuilder("nl")
@@ -103,12 +84,7 @@ async function underCooldown(
   return recent !== null;
 }
 
-export async function notifyEvents(
-  db: AppDb,
-  events: StockEvent[],
-  now: number,
-  deps: Deps = {},
-): Promise<{ pushed: number; emailed: number }> {
+export async function notifyEvents(db: AppDb, events: StockEvent[], now: number, deps: Deps = {}): Promise<{ pushed: number; emailed: number }> {
   const doPush = deps.push ?? sendPush;
   const doEmail = deps.email ?? sendAlertEmail;
   const log = db.getRepository(NotificationLogEntity);

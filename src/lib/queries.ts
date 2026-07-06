@@ -1,12 +1,4 @@
-import {
-  EventEntity,
-  OfferEntity,
-  RetailerEntity,
-  StoreAvailabilityEntity,
-  StoreEntity,
-  VariantEntity,
-  type AppDb,
-} from "@/db";
+import { EventEntity, OfferEntity, RetailerEntity, StoreAvailabilityEntity, StoreEntity, VariantEntity, type AppDb } from "@/db";
 import { distanceKm, plzToLatLng } from "./geo";
 import type { StockStatus, VariantSlug } from "./retailers/types";
 
@@ -26,9 +18,7 @@ export interface VariantStatus {
 
 export async function getVariantStatuses(db: AppDb): Promise<VariantStatus[]> {
   const variants = await db.getRepository(VariantEntity).find();
-  const retailers = new Map(
-    (await db.getRepository(RetailerEntity).find()).map((r) => [r.slug, r]),
-  );
+  const retailers = new Map((await db.getRepository(RetailerEntity).find()).map((r) => [r.slug, r]));
   const offers = await db.getRepository(OfferEntity).find();
 
   return variants.map((variant) => ({
@@ -68,23 +58,14 @@ export async function getRecentEvents(db: AppDb, limit = 30): Promise<FeedEvent[
     order: { createdAt: "DESC", id: "DESC" },
     take: limit,
   });
-  const retailers = new Map(
-    (await db.getRepository(RetailerEntity).find()).map((r) => [r.slug, r.name]),
-  );
-  const variants = new Map(
-    (await db.getRepository(VariantEntity).find()).map((v) => [v.slug, v.name]),
-  );
+  const retailers = new Map((await db.getRepository(RetailerEntity).find()).map((r) => [r.slug, r.name]));
+  const variants = new Map((await db.getRepository(VariantEntity).find()).map((v) => [v.slug, v.name]));
   const storeIds = [...new Set(events.map((e) => e.storeId).filter((id): id is number => id !== null))];
   const stores = storeIds.length
     ? await db.getRepository(StoreEntity).createQueryBuilder("s").where("s.id IN (:...ids)", { ids: storeIds }).getMany()
     : [];
   const storeById = new Map(stores.map((s) => [s.id, s.name]));
-  const urlByOffer = new Map(
-    (await db.getRepository(OfferEntity).find()).map((o) => [
-      `${o.retailerSlug}:${o.variantSlug}`,
-      o.url,
-    ]),
-  );
+  const urlByOffer = new Map((await db.getRepository(OfferEntity).find()).map((o) => [`${o.retailerSlug}:${o.variantSlug}`, o.url]));
 
   return events.map((e) => ({
     type: e.type,
@@ -112,9 +93,7 @@ export interface NearbyStore {
 /** All stores with availability data, no location filter (map view). */
 export async function listAllStores(db: AppDb, variant?: VariantSlug): Promise<NearbyStore[]> {
   const stores = await db.getRepository(StoreEntity).find();
-  const retailers = new Map(
-    (await db.getRepository(RetailerEntity).find()).map((r) => [r.slug, r.name]),
-  );
+  const retailers = new Map((await db.getRepository(RetailerEntity).find()).map((r) => [r.slug, r.name]));
   const availability = await db.getRepository(StoreAvailabilityEntity).find();
 
   const byStore = new Map<number, { inStock: boolean; lastCheckedAt: number }>();
@@ -143,19 +122,12 @@ export async function listAllStores(db: AppDb, variant?: VariantSlug): Promise<N
     .sort((a, b) => Number(b.inStock) - Number(a.inStock) || a.zip.localeCompare(b.zip));
 }
 
-export async function findStoresNear(
-  db: AppDb,
-  zip: string,
-  radiusKm: number,
-  variant?: VariantSlug,
-): Promise<NearbyStore[]> {
+export async function findStoresNear(db: AppDb, zip: string, radiusKm: number, variant?: VariantSlug): Promise<NearbyStore[]> {
   const home = plzToLatLng(zip);
   if (!home) return [];
 
   const stores = await db.getRepository(StoreEntity).find();
-  const retailers = new Map(
-    (await db.getRepository(RetailerEntity).find()).map((r) => [r.slug, r.name]),
-  );
+  const retailers = new Map((await db.getRepository(RetailerEntity).find()).map((r) => [r.slug, r.name]));
   const availability = await db.getRepository(StoreAvailabilityEntity).find();
 
   const byStore = new Map<number, { inStock: boolean; lastCheckedAt: number }>();
@@ -182,7 +154,5 @@ export async function findStoresNear(
       lastCheckedAt: byStore.get(s.id)!.lastCheckedAt,
     }))
     .filter((s) => s.distanceKm! <= radiusKm)
-    .sort(
-      (a, b) => Number(b.inStock) - Number(a.inStock) || a.distanceKm! - b.distanceKm!,
-    );
+    .sort((a, b) => Number(b.inStock) - Number(a.inStock) || a.distanceKm! - b.distanceKm!);
 }

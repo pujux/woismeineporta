@@ -4,9 +4,4 @@ import { obiAdapter } from "./obi";
 import { teptoAdapter } from "./tepto";
 import type { RetailerAdapter } from "./types";
 
-export const adapters: RetailerAdapter[] = [
-  obiAdapter,
-  mediamarktAdapter,
-  teptoAdapter,
-  bauhausAdapter,
-];
+export const adapters: RetailerAdapter[] = [obiAdapter, mediamarktAdapter, teptoAdapter, bauhausAdapter];

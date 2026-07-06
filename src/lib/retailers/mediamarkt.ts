@@ -19,20 +19,12 @@ const PRODUCTS: Array<{ variant: VariantSlug; productId: string; url: string }> 
 // section appears with escaped quotes (\"). Both plain and escaped forms are
 // matched. Values scoped to the product id to avoid picking up recommendations.
 function extractScoped(html: string, typename: string, productId: string, field: string): string | null {
-  const re = new RegExp(
-    `"${typename}","id":"Media:de:${productId}"[\\s\\S]{0,400}?${field}\\\\?":\\\\?"([A-Z_]+)`,
-  );
+  const re = new RegExp(String.raw`"${typename}","id":"Media:de:${productId}"[\s\S]{0,400}?${field}\\?":\\?"([A-Z_]+)`);
   return re.exec(html)?.[1] ?? null;
 }
 
 const ONLINE_IN_STOCK = new Set(["AVAILABLE", "BUYABLE", "IN_STOCK"]);
-const ONLINE_OUT_OF_STOCK = new Set([
-  "TEMPORARILY_NOT_AVAILABLE",
-  "PERMANENTLY_NOT_AVAILABLE",
-  "NOT_AVAILABLE",
-  "SOLD_OUT",
-  "NOT_IN_ASSORTMENT",
-]);
+const ONLINE_OUT_OF_STOCK = new Set(["TEMPORARILY_NOT_AVAILABLE", "PERMANENTLY_NOT_AVAILABLE", "NOT_AVAILABLE", "SOLD_OUT", "NOT_IN_ASSORTMENT"]);
 
 function combineStatus(ld: StockStatus, onlineStatus: string | null): StockStatus {
   if (onlineStatus && ONLINE_IN_STOCK.has(onlineStatus)) return "in_stock";
@@ -58,11 +50,7 @@ export const mediamarktAdapter: RetailerAdapter = {
   async check(fetchFn) {
     const offers: OnlineOffer[] = [];
     for (const product of PRODUCTS) {
-      const res = await politeFetch(
-        product.url,
-        { headers: { Accept: "text/html" } },
-        fetchFn,
-      );
+      const res = await politeFetch(product.url, { headers: { Accept: "text/html" } }, fetchFn);
       const html = await res.text();
       const ld = parseProductLd(html);
       if (!ld) throw new Error(`mediamarkt: no product JSON-LD for ${product.productId}`);

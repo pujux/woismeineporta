@@ -18,7 +18,7 @@ export function StoreFinder() {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
-  async function search(e: React.FormEvent) {
+  async function search(e: React.SyntheticEvent) {
     e.preventDefault();
     if (!/^\d{4}$/.test(zip)) {
       setError("Bitte eine 4-stellige PLZ eingeben.");
@@ -34,7 +34,7 @@ export function StoreFinder() {
       setFocus(d.center ? { center: d.center, radiusKm: d.radiusKm } : null);
       setMode("search");
     } catch {
-      setError("Suche fehlgeschlagen — bitte später nochmal versuchen.");
+      setError("Suche fehlgeschlagen — bitte später nochmal probieren.");
     } finally {
       setLoading(false);
     }
@@ -68,12 +68,7 @@ export function StoreFinder() {
           aria-describedby={error ? "plz-error" : undefined}
           className={`w-32 ${INPUT_CLASSES}`}
         />
-        <select
-          value={radius}
-          onChange={(e) => setRadius(Number(e.target.value))}
-          aria-label="Umkreis"
-          className={INPUT_CLASSES}
-        >
+        <select value={radius} onChange={(e) => setRadius(Number(e.target.value))} aria-label="Umkreis" className={INPUT_CLASSES}>
           {RADII.map((r) => (
             <option key={r} value={r}>
               {r} km
@@ -110,10 +105,7 @@ export function StoreFinder() {
           <p className="mt-2 text-xs text-slate-400 dark:text-slate-500">
             {stores.length} Filialen
             {inStockCount > 0 ? (
-              <span className="font-medium text-green-700 dark:text-green-400">
-                {" "}
-                — {inStockCount} davon lagernd 🟢
-              </span>
+              <span className="font-medium text-green-700 dark:text-green-400"> — {inStockCount} davon lagernd 🟢</span>
             ) : (
               " — derzeit keine lagernd"
             )}
@@ -125,17 +117,12 @@ export function StoreFinder() {
       {mode === "search" && (
         <div className="mt-4">
           {stores.length === 0 ? (
-            <p className="text-sm text-slate-500 dark:text-slate-400">
-              Keine Filiale mit Verfügbarkeitsdaten im Umkreis gefunden. 😞
-            </p>
+            <p className="text-sm text-slate-500 dark:text-slate-400">Keine Filiale mit Verfügbarkeitsdaten im Umkreis gefunden. 😞</p>
           ) : (
             <ul className="divide-y divide-slate-100 overflow-hidden rounded-xl border border-slate-200 bg-white shadow-sm dark:divide-slate-800 dark:border-slate-800 dark:bg-slate-900">
-              {stores.map((s, i) => (
-                <li key={i} className="flex items-center gap-3 px-4 py-2.5 text-sm">
-                  <span
-                    className={`h-2.5 w-2.5 shrink-0 rounded-full ${s.inStock ? "animate-pulse-dot bg-green-500" : "bg-red-400"}`}
-                    aria-hidden
-                  />
+              {stores.map((s) => (
+                <li key={s.name} className="flex items-center gap-3 px-4 py-2.5 text-sm">
+                  <span className={`h-2.5 w-2.5 shrink-0 rounded-full ${s.inStock ? "animate-pulse-dot bg-green-500" : "bg-red-400"}`} aria-hidden />
                   <div className="min-w-0">
                     <span className="font-medium text-slate-900 dark:text-slate-100">
                       {s.retailerName} {s.name}
@@ -145,9 +132,7 @@ export function StoreFinder() {
                     </span>
                   </div>
                   {s.distanceKm !== null && (
-                    <span className="ml-auto shrink-0 tabular-nums text-slate-500 dark:text-slate-400">
-                      {s.distanceKm.toFixed(0)} km
-                    </span>
+                    <span className="ml-auto shrink-0 tabular-nums text-slate-500 dark:text-slate-400">{s.distanceKm.toFixed(0)} km</span>
                   )}
                   <span
                     className={`w-24 shrink-0 text-right text-xs font-medium ${s.inStock ? "text-green-700 dark:text-green-400" : "text-red-500 dark:text-red-400"}`}

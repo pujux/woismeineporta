@@ -13,7 +13,7 @@ export interface MapFocus {
   radiusKm: number;
 }
 
-export function StoreMap({ stores, focus }: { stores: NearbyStore[]; focus: MapFocus | null }) {
+export function StoreMap({ stores, focus }: Readonly<{ stores: NearbyStore[]; focus: MapFocus | null }>) {
   const containerRef = useRef<HTMLDivElement>(null);
   const mapRef = useRef<LeafletMap | null>(null);
   const markersRef = useRef<CircleMarker[]>([]);
@@ -61,9 +61,7 @@ export function StoreMap({ stores, focus }: { stores: NearbyStore[]; focus: MapF
         })
           .bindPopup(
             `<strong>${s.retailerName} ${s.name}</strong><br>${s.zip} ${s.city}<br>` +
-              (s.inStock
-                ? '<span style="color:#15803d;font-weight:600">Lagernd ✓</span>'
-                : '<span style="color:#b91c1c">Ausverkauft</span>'),
+              (s.inStock ? '<span style="color:#15803d;font-weight:600">Lagernd ✓</span>' : '<span style="color:#b91c1c">Ausverkauft</span>'),
           )
           .addTo(map),
       );

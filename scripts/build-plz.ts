@@ -26,8 +26,8 @@ async function main() {
   for (const line of lines) {
     const cols = line.split("\t");
     const zip = cols[1];
-    const lat = parseFloat(cols[9]);
-    const lng = parseFloat(cols[10]);
+    const lat = Number.parseFloat(cols[9]);
+    const lng = Number.parseFloat(cols[10]);
     if (!zip || !Number.isFinite(lat) || !Number.isFinite(lng)) continue;
     if (!byZip.has(zip)) byZip.set(zip, []);
     byZip.get(zip)!.push([lat, lng]);

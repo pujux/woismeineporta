@@ -10,10 +10,7 @@ export interface PushPayload {
 }
 
 export interface PushSender {
-  sendNotification(
-    subscription: { endpoint: string; keys: { p256dh: string; auth: string } },
-    payload: string,
-  ): Promise<unknown>;
+  sendNotification(subscription: { endpoint: string; keys: { p256dh: string; auth: string } }, payload: string): Promise<unknown>;
 }
 
 let configured = false;
@@ -29,12 +26,7 @@ function defaultSender(): PushSender {
   return webpush;
 }
 
-export async function sendPush(
-  db: AppDb,
-  subscriptionId: number,
-  payload: PushPayload,
-  sender?: PushSender,
-): Promise<"sent" | "gone" | "failed"> {
+export async function sendPush(db: AppDb, subscriptionId: number, payload: PushPayload, sender?: PushSender): Promise<"sent" | "gone" | "failed"> {
   const repo = db.getRepository(PushSubscriptionEntity);
   const sub = await repo.findOneBy({ id: subscriptionId });
   if (!sub) return "gone";
@@ -91,11 +83,7 @@ export function validatePushInput(input: unknown): PushSubscriptionInput | null 
   };
 }
 
-export async function upsertPushSubscription(
-  db: AppDb,
-  input: PushSubscriptionInput,
-  now: number,
-): Promise<void> {
+export async function upsertPushSubscription(db: AppDb, input: PushSubscriptionInput, now: number): Promise<void> {
   await db.getRepository(PushSubscriptionEntity).upsert(
     {
       endpoint: input.endpoint,

@@ -1,10 +1,6 @@
 import { NextResponse } from "next/server";
 import { getDb } from "@/db";
-import {
-  deletePushSubscription,
-  upsertPushSubscription,
-  validatePushInput,
-} from "@/lib/notify/push";
+import { deletePushSubscription, upsertPushSubscription, validatePushInput } from "@/lib/notify/push";
 
 export async function POST(request: Request) {
   let body: unknown;

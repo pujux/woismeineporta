@@ -8,12 +8,9 @@ import type { VariantSlug } from "@/lib/retailers/types";
 export async function GET(request: Request) {
   const params = new URL(request.url).searchParams;
   const zip = params.get("zip") ?? "";
-  const radius = Math.min(Math.max(parseInt(params.get("radius") ?? "50", 10) || 50, 1), 300);
+  const radius = Math.min(Math.max(Number.parseInt(params.get("radius") ?? "50", 10) || 50, 1), 300);
   const variantParam = params.get("variant");
-  const variant =
-    variantParam && (VARIANT_SLUGS as readonly string[]).includes(variantParam)
-      ? (variantParam as VariantSlug)
-      : undefined;
+  const variant = variantParam && (VARIANT_SLUGS as readonly string[]).includes(variantParam) ? (variantParam as VariantSlug) : undefined;
 
   // Store availability changes at most once per poll tick; cache per full URL
   // (zip+radius+variant) for a short window. Ignored when no shared cache fronts it.
@@ -29,8 +26,5 @@ export async function GET(request: Request) {
     return NextResponse.json({ error: "PLZ ungültig" }, { status: 400 });
   }
   const stores = await findStoresNear(await getDb(), zip, radius, variant);
-  return NextResponse.json(
-    { stores, center: plzToLatLng(zip), radiusKm: radius },
-    { headers: cache },
-  );
+  return NextResponse.json({ stores, center: plzToLatLng(zip), radiusKm: radius }, { headers: cache });
 }

@@ -9,7 +9,7 @@ import { formatRelativeTime } from "@/lib/format";
  * between the page's periodic refreshes. `initial` is the server-rendered value
  * to keep the first client paint identical (no hydration mismatch).
  */
-export function RelativeTime({ timestamp, initial }: { timestamp: number; initial: string }) {
+export function RelativeTime({ timestamp, initial }: Readonly<{ timestamp: number; initial: string }>) {
   const [label, setLabel] = useState(initial);
   useEffect(() => {
     const tick = () => setLabel(formatRelativeTime(timestamp, Date.now()));

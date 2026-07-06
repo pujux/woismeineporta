@@ -33,25 +33,19 @@ describe("computeDiff — online offers", () => {
   ] as const)("%s -> in_stock emits %s", (from, expected) => {
     const p = prev({ offers: new Map([["portasplit", { status: from, priceCents: 89999 }]]) });
     const events = computeDiff(p, result({ offers: [offer("in_stock")] }));
-    expect(events).toEqual([
-      { type: expected, retailerSlug: "obi", variantSlug: "portasplit", priceCents: 89999 },
-    ]);
+    expect(events).toEqual([{ type: expected, retailerSlug: "obi", variantSlug: "portasplit", priceCents: 89999 }]);
   });
 
   it("in_stock -> out_of_stock emits online_soldout", () => {
     const p = prev({ offers: new Map([["portasplit", { status: "in_stock", priceCents: 89999 }]]) });
     const events = computeDiff(p, result({ offers: [offer("out_of_stock")] }));
-    expect(events).toEqual([
-      { type: "online_soldout", retailerSlug: "obi", variantSlug: "portasplit", priceCents: 89999 },
-    ]);
+    expect(events).toEqual([{ type: "online_soldout", retailerSlug: "obi", variantSlug: "portasplit", priceCents: 89999 }]);
   });
 
   it("price change while in stock emits price_change only", () => {
     const p = prev({ offers: new Map([["portasplit", { status: "in_stock", priceCents: 89999 }]]) });
     const events = computeDiff(p, result({ offers: [offer("in_stock", 79999)] }));
-    expect(events).toEqual([
-      { type: "price_change", retailerSlug: "obi", variantSlug: "portasplit", priceCents: 79999 },
-    ]);
+    expect(events).toEqual([{ type: "price_change", retailerSlug: "obi", variantSlug: "portasplit", priceCents: 79999 }]);
   });
 
   it("unseen offer arriving in stock emits online_restock", () => {

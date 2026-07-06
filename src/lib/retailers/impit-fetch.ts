@@ -9,7 +9,7 @@ export const impitFetch: typeof fetch = ((input: RequestInfo | URL, init?: Reque
   impit ??= new Impit({ browser: "chrome" });
   const headers: Record<string, string> = {};
   new Headers(init?.headers).forEach((value, key) => (headers[key] = value));
-  return impit.fetch(String(input), {
+  return impit.fetch(input, {
     method: init?.method as never,
     headers,
     body: init?.body as string | undefined,

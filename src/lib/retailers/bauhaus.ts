@@ -2,8 +2,7 @@ import { politeFetch } from "./fetch";
 import { parseProductLd } from "./jsonld";
 import type { RetailerAdapter } from "./types";
 
-const URL =
-  "https://www.bauhaus.at/klimaanlagen/midea-klimasplitgeraet-portasplit-12000-btu/p/31934233";
+const URL = "https://www.bauhaus.at/klimaanlagen/midea-klimasplitgeraet-portasplit-12000-btu/p/31934233";
 
 // bauhaus.at sits behind Cloudflare bot management. The poller fetches through
 // impit (Chrome TLS impersonation, see impit-fetch.ts), which clears the

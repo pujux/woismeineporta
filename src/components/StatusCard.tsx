@@ -29,13 +29,7 @@ const STATUS_META = {
   },
 } as const;
 
-export function StatusCard({
-  offer,
-  now,
-}: {
-  offer: VariantStatus["offers"][number];
-  now: number;
-}) {
+export function StatusCard({ offer, now }: Readonly<{ offer: VariantStatus["offers"][number]; now: number }>) {
   const meta = STATUS_META[offer.status];
 
   return (
@@ -47,30 +41,19 @@ export function StatusCard({
     >
       <div className="min-w-0 flex-1">
         <div className="flex flex-wrap items-center gap-x-2 gap-y-1">
-          <span
-            className={`inline-flex items-center gap-1.5 rounded-full px-2 py-0.5 text-xs font-semibold ring-1 ring-inset ${meta.chip}`}
-          >
-            <span
-              className={`h-1.5 w-1.5 rounded-full ${meta.dot} ${offer.status === "in_stock" ? "animate-pulse-dot" : ""}`}
-              aria-hidden
-            />
+          <span className={`inline-flex items-center gap-1.5 rounded-full px-2 py-0.5 text-xs font-semibold ring-1 ring-inset ${meta.chip}`}>
+            <span className={`h-1.5 w-1.5 rounded-full ${meta.dot} ${offer.status === "in_stock" ? "animate-pulse-dot" : ""}`} aria-hidden />
             {meta.label}
           </span>
           <span className="font-medium text-slate-700 dark:text-slate-300">{offer.retailerName}</span>
         </div>
         <p className="mt-1 text-xs text-slate-500 dark:text-slate-400">
-          {offer.pickupNote && (
-            <span className="text-sky-700 dark:text-sky-400">{offer.pickupNote} · </span>
-          )}
+          {offer.pickupNote && <span className="text-sky-700 dark:text-sky-400">{offer.pickupNote} · </span>}
           {offer.lastCheckedAt === 0 ? (
             "noch nicht geprüft"
           ) : (
             <>
-              <RelativeTime
-                timestamp={offer.lastCheckedAt}
-                initial={formatRelativeTime(offer.lastCheckedAt, now)}
-              />{" "}
-              geprüft
+              <RelativeTime timestamp={offer.lastCheckedAt} initial={formatRelativeTime(offer.lastCheckedAt, now)} /> geprüft
             </>
           )}
         </p>

@@ -1,11 +1,6 @@
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import { createDb, EmailSubscriptionEntity, type AppDb } from "@/db";
-import {
-  confirmEmail,
-  createEmailSubscription,
-  sendAlertEmail,
-  unsubscribeEmail,
-} from "@/lib/notify/email";
+import { confirmEmail, createEmailSubscription, sendAlertEmail, unsubscribeEmail } from "@/lib/notify/email";
 
 describe("email subscriptions", () => {
   let db: AppDb;
@@ -17,11 +12,7 @@ describe("email subscriptions", () => {
   });
 
   it("creates an unconfirmed subscription and sends a confirm mail", async () => {
-    const result = await createEmailSubscription(
-      db,
-      { email: "julian@example.at", variantSlugs: ["portasplit"] },
-      send,
-    );
+    const result = await createEmailSubscription(db, { email: "julian@example.at", variantSlugs: ["portasplit"] }, send);
     expect(result).toBe("created");
     const row = await db.getRepository(EmailSubscriptionEntity).findOneByOrFail({
       email: "julian@example.at",
@@ -39,12 +30,7 @@ describe("email subscriptions", () => {
     const first = await db.getRepository(EmailSubscriptionEntity).findOneByOrFail({ email: "a@b.at" });
 
     // Within the 2-min window: prefs update, but NO second mail (anti-bombing).
-    const r2 = await createEmailSubscription(
-      db,
-      { email: "a@b.at", variantSlugs: ["portasplit", "portasplit-cool"] },
-      send,
-      1000 + 60_000,
-    );
+    const r2 = await createEmailSubscription(db, { email: "a@b.at", variantSlugs: ["portasplit", "portasplit-cool"] }, send, 1000 + 60_000);
     expect(r2).toBe("resent");
     expect(send).toHaveBeenCalledTimes(1);
     const second = await db.getRepository(EmailSubscriptionEntity).findOneByOrFail({ email: "a@b.at" });
@@ -65,12 +51,7 @@ describe("email subscriptions", () => {
     await confirmEmail(db, row.confirmToken);
     send.mockClear();
 
-    const result = await createEmailSubscription(
-      db,
-      { email: "a@b.at", variantSlugs: ["portasplit", "portasplit-cool"] },
-      send,
-      9_999_999_999,
-    );
+    const result = await createEmailSubscription(db, { email: "a@b.at", variantSlugs: ["portasplit", "portasplit-cool"] }, send, 9_999_999_999);
     expect(result).toBe("resent");
     expect(send).not.toHaveBeenCalled();
     const after = await db.getRepository(EmailSubscriptionEntity).findOneByOrFail({ email: "a@b.at" });

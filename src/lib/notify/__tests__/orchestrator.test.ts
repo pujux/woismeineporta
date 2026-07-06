@@ -1,12 +1,5 @@
 import { beforeEach, describe, expect, it, vi } from "vitest";
-import {
-  EmailSubscriptionEntity,
-  NotificationLogEntity,
-  OfferEntity,
-  PushSubscriptionEntity,
-  StoreEntity,
-  type AppDb,
-} from "@/db";
+import { EmailSubscriptionEntity, NotificationLogEntity, OfferEntity, PushSubscriptionEntity, StoreEntity, type AppDb } from "@/db";
 import { createTestDb } from "@/db/test-utils";
 import { notifyEvents } from "@/lib/notify/orchestrator";
 import type { StockEvent } from "@/lib/diff";

@@ -1,12 +1,6 @@
 import { politeFetch } from "./fetch";
 import { parseProductLd } from "./jsonld";
-import type {
-  OnlineOffer,
-  RetailerAdapter,
-  StoreInfo,
-  StoreStock,
-  VariantSlug,
-} from "./types";
+import type { OnlineOffer, RetailerAdapter, StoreInfo, StoreStock, VariantSlug } from "./types";
 
 const PRODUCTS: Array<{ variant: VariantSlug; sku: string; url: string }> = [
   {
@@ -31,11 +25,7 @@ interface ObiStore {
 }
 
 async function fetchStores(fetchFn: typeof fetch): Promise<StoreInfo[]> {
-  const res = await politeFetch(
-    STORE_DIRECTORY_URL,
-    { headers: { Accept: "application/json" } },
-    fetchFn,
-  );
+  const res = await politeFetch(STORE_DIRECTORY_URL, { headers: { Accept: "application/json" } }, fetchFn);
   const body = (await res.json()) as { stores: ObiStore[] };
   return body.stores.map((s) => ({
     externalId: s.storeNumber,
@@ -47,11 +37,7 @@ async function fetchStores(fetchFn: typeof fetch): Promise<StoreInfo[]> {
   }));
 }
 
-async function fetchStock(
-  fetchFn: typeof fetch,
-  sku: string,
-  storeIds: string[],
-): Promise<Map<string, number>> {
+async function fetchStock(fetchFn: typeof fetch, sku: string, storeIds: string[]): Promise<Map<string, number>> {
   const quantities = new Map<string, number>();
   for (let i = 0; i < storeIds.length; i += STOCK_CHUNK_SIZE) {
     const chunk = storeIds.slice(i, i + STOCK_CHUNK_SIZE);
@@ -76,11 +62,7 @@ export const obiAdapter: RetailerAdapter = {
   async check(fetchFn) {
     const offers: OnlineOffer[] = [];
     for (const product of PRODUCTS) {
-      const res = await politeFetch(
-        product.url,
-        { headers: { Accept: "text/html" } },
-        fetchFn,
-      );
+      const res = await politeFetch(product.url, { headers: { Accept: "text/html" } }, fetchFn);
       const ld = parseProductLd(await res.text());
       if (!ld) throw new Error(`obi: no product JSON-LD for ${product.sku}`);
       offers.push({ variant: product.variant, url: product.url, ...ld });

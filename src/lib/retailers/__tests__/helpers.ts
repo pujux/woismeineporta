@@ -12,9 +12,7 @@ export function fixture(name: string): string {
  * Builds a fetch stub that serves fixture bodies for URL substring matches.
  * Routes are checked in order; unmatched URLs get a 404 response.
  */
-export function fixtureFetch(
-  routes: Array<[urlIncludes: string, body: string, status?: number]>,
-): typeof fetch {
+export function fixtureFetch(routes: Array<[urlIncludes: string, body: string, status?: number]>): typeof fetch {
   return vi.fn(async (input: RequestInfo | URL) => {
     const url = String(input);
     for (const [needle, body, status = 200] of routes) {

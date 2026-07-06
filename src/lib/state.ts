@@ -1,10 +1,4 @@
-import {
-  EventEntity,
-  OfferEntity,
-  StoreAvailabilityEntity,
-  StoreEntity,
-  type AppDb,
-} from "@/db";
+import { EventEntity, OfferEntity, StoreAvailabilityEntity, StoreEntity, type AppDb } from "@/db";
 import type { PrevState, StockEvent } from "./diff";
 import type { RetailerResult } from "./retailers/types";
 import type { StockStatusDb } from "@/db/entities";
@@ -22,32 +16,19 @@ export async function loadPrevState(db: AppDb, retailerSlug: string): Promise<Pr
     : [];
 
   return {
-    offers: new Map(
-      offers.map((o) => [o.variantSlug, { status: o.status, priceCents: o.priceCents }]),
-    ),
-    storeStock: new Map(
-      availability.map((a) => [
-        `${storeById.get(a.storeId)!.externalId}:${a.variantSlug}`,
-        a.inStock,
-      ]),
-    ),
+    offers: new Map(offers.map((o) => [o.variantSlug, { status: o.status, priceCents: o.priceCents }])),
+    storeStock: new Map(availability.map((a) => [`${storeById.get(a.storeId)!.externalId}:${a.variantSlug}`, a.inStock])),
   };
 }
 
-export async function persistResult(
-  db: AppDb,
-  result: RetailerResult,
-  events: StockEvent[],
-  now: number,
-): Promise<void> {
+export async function persistResult(db: AppDb, result: RetailerResult, events: StockEvent[], now: number): Promise<void> {
   const { retailerSlug } = result;
   const offerRepo = db.getRepository(OfferEntity);
   const prev = await loadPrevState(db, retailerSlug);
 
   for (const offer of result.offers) {
     const before = prev.offers.get(offer.variant);
-    const changed =
-      !before || before.status !== offer.status || before.priceCents !== offer.priceCents;
+    const changed = before?.status !== offer.status || before.priceCents !== offer.priceCents;
     const existing = await offerRepo.findOneBy({ retailerSlug, variantSlug: offer.variant });
     const row = {
       retailerSlug,
@@ -121,7 +102,5 @@ export async function persistResult(
 }
 
 export async function markUnknown(db: AppDb, retailerSlug: string, now: number): Promise<void> {
-  await db
-    .getRepository(OfferEntity)
-    .update({ retailerSlug }, { status: "unknown", lastCheckedAt: now });
+  await db.getRepository(OfferEntity).update({ retailerSlug }, { status: "unknown", lastCheckedAt: now });
 }

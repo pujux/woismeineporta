@@ -118,17 +118,10 @@ export const StoreAvailabilityEntity = new EntitySchema<StoreAvailability>({
     lastCheckedAt: { type: "integer", name: "last_checked_at", default: 0 },
     lastChangedAt: { type: "integer", name: "last_changed_at", default: 0 },
   },
-  indices: [
-    { name: "sa_store_variant", columns: ["storeId", "variantSlug"], unique: true },
-  ],
+  indices: [{ name: "sa_store_variant", columns: ["storeId", "variantSlug"], unique: true }],
 });
 
-export type EventTypeDb =
-  | "online_restock"
-  | "online_soldout"
-  | "price_change"
-  | "store_restock"
-  | "store_soldout";
+export type EventTypeDb = "online_restock" | "online_soldout" | "price_change" | "store_restock" | "store_soldout";
 
 export interface EventRow {
   id: number;

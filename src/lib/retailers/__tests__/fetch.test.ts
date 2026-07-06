@@ -20,9 +20,7 @@ describe("politeFetch", () => {
       name: "AdapterHttpError",
       status: 403,
     });
-    await expect(
-      politeFetch("https://example.at/x", undefined, fetchFn),
-    ).rejects.toBeInstanceOf(AdapterHttpError);
+    await expect(politeFetch("https://example.at/x", undefined, fetchFn)).rejects.toBeInstanceOf(AdapterHttpError);
   });
 
   it("merges caller headers over defaults", async () => {

@@ -3,9 +3,7 @@ export function formatPrice(cents: number | null): string {
   const euros = cents / 100;
   // de-DE, not de-AT: Node's de-AT uses a space as thousands separator,
   // but the conventional Austrian retail notation is "1.199,00".
-  return (
-    euros.toLocaleString("de-DE", { minimumFractionDigits: 2, maximumFractionDigits: 2 }) + " €"
-  );
+  return euros.toLocaleString("de-DE", { minimumFractionDigits: 2, maximumFractionDigits: 2 }) + " €";
 }
 
 // Pinned to Europe/Vienna so server (UTC container) and client render the same

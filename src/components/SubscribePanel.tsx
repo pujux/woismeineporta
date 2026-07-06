@@ -14,7 +14,7 @@ const INPUT_CLASSES =
 
 function urlBase64ToUint8Array(base64: string): Uint8Array {
   const padding = "=".repeat((4 - (base64.length % 4)) % 4);
-  const raw = atob((base64 + padding).replace(/-/g, "+").replace(/_/g, "/"));
+  const raw = atob((base64 + padding).replaceAll("-", "+").replaceAll("_", "/"));
   return Uint8Array.from(raw, (c) => c.charCodeAt(0));
 }
 
@@ -33,8 +33,7 @@ export function SubscribePanel() {
   const [emailState, setEmailState] = useState<"idle" | "sending" | "sent" | "error">("idle");
 
   const isIos = typeof navigator !== "undefined" && /iPhone|iPad|iPod/.test(navigator.userAgent);
-  const isStandalone =
-    typeof window !== "undefined" && window.matchMedia("(display-mode: standalone)").matches;
+  const isStandalone = typeof window !== "undefined" && window.matchMedia("(display-mode: standalone)").matches;
 
   useEffect(() => {
     (async () => {
@@ -88,7 +87,7 @@ export function SubscribePanel() {
         setPushState("denied");
       } else {
         setPushState("idle");
-        setPushError("Hat nicht geklappt — bitte versuch's nochmal.");
+        setPushError("Hat nicht geklappt — bitte probier's nochmal.");
         console.error("push subscribe failed:", err);
       }
     }
@@ -112,7 +111,7 @@ export function SubscribePanel() {
     }
   }
 
-  async function subscribeEmail(e: React.FormEvent) {
+  async function subscribeEmail(e: React.SyntheticEvent) {
     e.preventDefault();
     if (variants.length === 0) return;
     setEmailState("sending");
@@ -129,32 +128,20 @@ export function SubscribePanel() {
   }
 
   return (
-    <div className="rounded-2xl border border-sky-200 bg-gradient-to-b from-sky-50 to-white p-5 shadow-sm dark:border-sky-900/60 dark:from-sky-950/60 dark:to-slate-900">
-      <h2 className="text-lg font-semibold text-slate-900 dark:text-slate-100">
-        🔔 Keine PortaSplit mehr verpassen
-      </h2>
+    <div className="rounded-2xl border border-sky-200 bg-linear-to-b from-sky-50 to-white p-5 shadow-sm dark:border-sky-900/60 dark:from-sky-950/60 dark:to-slate-900">
+      <h2 className="text-lg font-semibold text-slate-900 dark:text-slate-100">🔔 Keine PortaSplit mehr verpassen</h2>
       <p className="mt-1 text-sm text-slate-600 dark:text-slate-400">
-        Sobald sie wieder bestellbar ist, bist du meist innerhalb einer Minute informiert — per
-        Push oder E-Mail. Kostenlos, jederzeit abbestellbar.
+        Sobald sie wieder bestellbar ist, sagen wir dir Bescheid — meist innerhalb einer Minute, per Push oder E-Mail. Gratis und jederzeit abbestellbar.
       </p>
 
-      <p className="mt-4 mb-2 text-xs font-medium uppercase tracking-wide text-slate-500 dark:text-slate-400">
-        Für welche Modelle?
-      </p>
+      <p className="mt-4 mb-2 text-xs font-medium uppercase tracking-wide text-slate-500 dark:text-slate-400">Für welche Modelle?</p>
       <div className="flex flex-wrap gap-4">
         {VARIANTS.map((v) => (
-          <label
-            key={v.slug}
-            className="flex items-center gap-2 text-sm text-slate-800 dark:text-slate-200"
-          >
+          <label key={v.slug} className="flex items-center gap-2 text-sm text-slate-800 dark:text-slate-200">
             <input
               type="checkbox"
               checked={variants.includes(v.slug)}
-              onChange={(e) =>
-                setVariants((prev) =>
-                  e.target.checked ? [...prev, v.slug] : prev.filter((s) => s !== v.slug),
-                )
-              }
+              onChange={(e) => setVariants((prev) => (e.target.checked ? [...prev, v.slug] : prev.filter((s) => s !== v.slug)))}
               className="h-4 w-4 accent-sky-600"
             />
             {v.label}
@@ -175,30 +162,29 @@ export function SubscribePanel() {
         {storeAlert && (
           <>
             <p className="mt-2 text-xs text-slate-500 dark:text-slate-400">
-              Online-Restocks bekommst du ohnehin. Mit einer PLZ melden wir dir
-              <em> zusätzlich</em>, sobald ein Markt im Umkreis eine lagernd hat.
+              Online-Restocks bekommst du ohnehin. Mit einer PLZ melden wir dir <em> zusätzlich</em>, sobald ein Markt im Umkreis eine lagernd hat.
             </p>
             <div className="mt-2 flex items-center gap-2">
               <input
-              value={zip}
-              onChange={(e) => setZip(e.target.value.replace(/\D/g, "").slice(0, 4))}
-              inputMode="numeric"
-              placeholder="PLZ"
-              aria-label="PLZ für Filial-Alarm"
-              className={`w-24 ${INPUT_CLASSES}`}
-            />
-            <select
-              value={radiusKm}
-              onChange={(e) => setRadiusKm(Number(e.target.value))}
-              aria-label="Radius für Filial-Alarm"
-              className={INPUT_CLASSES}
-            >
-              {RADII.map((r) => (
-                <option key={r} value={r}>
-                  {r} km
-                </option>
-              ))}
-            </select>
+                value={zip}
+                onChange={(e) => setZip(e.target.value.replace(/\D/g, "").slice(0, 4))}
+                inputMode="numeric"
+                placeholder="PLZ"
+                aria-label="PLZ für Filial-Alarm"
+                className={`w-24 ${INPUT_CLASSES}`}
+              />
+              <select
+                value={radiusKm}
+                onChange={(e) => setRadiusKm(Number(e.target.value))}
+                aria-label="Radius für Filial-Alarm"
+                className={INPUT_CLASSES}
+              >
+                {RADII.map((r) => (
+                  <option key={r} value={r}>
+                    {r} km
+                  </option>
+                ))}
+              </select>
             </div>
           </>
         )}
@@ -208,9 +194,7 @@ export function SubscribePanel() {
         {/* Primary path: Web Push */}
         {pushState === "subscribed" ? (
           <div className="text-sm">
-            <span className="font-medium text-green-700 dark:text-green-400">
-              Push-Alarm ist aktiv — wir melden uns! ✓
-            </span>
+            <span className="font-medium text-green-700 dark:text-green-400">Push-Alarm ist aktiv — wir melden uns! ✓</span>
             <button
               onClick={disablePush}
               className="ml-3 text-slate-500 underline hover:text-slate-700 dark:text-slate-400 dark:hover:text-slate-200"
@@ -220,8 +204,7 @@ export function SubscribePanel() {
           </div>
         ) : pushState === "denied" ? (
           <p className="text-sm text-slate-500 dark:text-slate-400">
-            Push ist in deinem Browser blockiert — erlaube Benachrichtigungen in den
-            Website-Einstellungen.
+            Push ist in deinem Browser blockiert — erlaube Benachrichtigungen in den Website-Einstellungen.
           </p>
         ) : pushState === "unsupported" ? (
           <p className="text-sm text-slate-500 dark:text-slate-400">
@@ -239,15 +222,13 @@ export function SubscribePanel() {
         {pushError && <p className="mt-1 text-xs text-red-600 dark:text-red-400">{pushError}</p>}
         {isIos && !isStandalone && pushState !== "subscribed" && (
           <p className="mt-1.5 text-xs text-slate-500 dark:text-slate-400">
-            iPhone/iPad: Zuerst über „Teilen → Zum Home-Bildschirm" installieren, dann Push
-            aktivieren.
+            iPhone/iPad: Zuerst über „Teilen → Zum Home-Bildschirm&quot; installieren, dann Push aktivieren.
           </p>
         )}
 
         {/* Secondary path: e-mail */}
         <div className="my-3 flex items-center gap-3 text-xs text-slate-400 dark:text-slate-500">
-          <span className="h-px flex-1 bg-slate-200 dark:bg-slate-800" />
-          oder per E-Mail
+          <span className="h-px flex-1 bg-slate-200 dark:bg-slate-800" /> oder per E-Mail{" "}
           <span className="h-px flex-1 bg-slate-200 dark:bg-slate-800" />
         </div>
         <form onSubmit={subscribeEmail} className="flex gap-2">
@@ -270,14 +251,12 @@ export function SubscribePanel() {
         </form>
         {emailState === "sent" && (
           <p className="mt-2 text-sm text-green-700 dark:text-green-400">
-            Fast geschafft! Wir haben dir eine Bestätigungs-Mail geschickt — kurz bestätigen (auch
-            im Spam-Ordner schauen), dann ist der Alarm scharf. ✓
+            Fast geschafft! Wir haben dir eine Bestätigungs-Mail geschickt — kurz bestätigen (auch im Spam-Ordner schauen), dann ist der Alarm scharf.
+            ✓
           </p>
         )}
         {emailState === "error" && (
-          <p className="mt-2 text-sm text-red-600 dark:text-red-400">
-            Das hat nicht geklappt — E-Mail-Adresse prüfen und nochmal versuchen.
-          </p>
+          <p className="mt-2 text-sm text-red-600 dark:text-red-400">Das hat nicht geklappt — E-Mail-Adresse prüfen und nochmal probieren.</p>
         )}
       </div>
     </div>

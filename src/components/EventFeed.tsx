@@ -5,12 +5,7 @@ import { formatDateTime, formatDuration, formatPrice, formatRelativeTime } from 
 import type { FeedEvent } from "@/lib/queries";
 import { RelativeTime } from "./RelativeTime";
 
-const AVAILABILITY = new Set([
-  "online_restock",
-  "online_soldout",
-  "store_restock",
-  "store_soldout",
-]);
+const AVAILABILITY = new Set(["online_restock", "online_soldout", "store_restock", "store_soldout"]);
 const RESTOCK = new Set(["online_restock", "store_restock"]);
 const SOLDOUT = new Set(["online_soldout", "store_soldout"]);
 
@@ -41,10 +36,15 @@ function meta(type: string) {
     return { label: "Bestellbar", circle: "bg-green-500", labelClass: "text-green-700 dark:text-green-400", icon: <CheckIcon /> };
   if (SOLDOUT.has(type))
     return { label: "Ausverkauft", circle: "bg-slate-400 dark:bg-slate-600", labelClass: "text-slate-500 dark:text-slate-400", icon: <XIcon /> };
-  return { label: "Preis geändert", circle: "bg-sky-500", labelClass: "text-sky-700 dark:text-sky-400", icon: <span className="text-[11px] font-bold">€</span> };
+  return {
+    label: "Preis geändert",
+    circle: "bg-sky-500",
+    labelClass: "text-sky-700 dark:text-sky-400",
+    icon: <span className="text-[11px] font-bold">€</span>,
+  };
 }
 
-export function EventFeed({ events, now }: { events: FeedEvent[]; now: number }) {
+export function EventFeed({ events, now }: Readonly<{ events: FeedEvent[]; now: number }>) {
   const [filter, setFilter] = useState<FilterKey>("all");
   const [shown, setShown] = useState(PAGE_SIZE);
 
@@ -56,12 +56,7 @@ export function EventFeed({ events, now }: { events: FeedEvent[]; now: number })
       if (!SOLDOUT.has(e.type)) return;
       for (let j = i + 1; j < events.length; j++) {
         const p = events[j];
-        if (
-          RESTOCK.has(p.type) &&
-          p.retailerName === e.retailerName &&
-          p.variantName === e.variantName &&
-          p.storeName === e.storeName
-        ) {
+        if (RESTOCK.has(p.type) && p.retailerName === e.retailerName && p.variantName === e.variantName && p.storeName === e.storeName) {
           map.set(e, e.createdAt - p.createdAt);
           break;
         }
@@ -71,14 +66,7 @@ export function EventFeed({ events, now }: { events: FeedEvent[]; now: number })
   }, [events]);
 
   const filtered = useMemo(
-    () =>
-      events.filter((e) =>
-        filter === "all"
-          ? true
-          : filter === "availability"
-            ? AVAILABILITY.has(e.type)
-            : e.type === "price_change",
-      ),
+    () => events.filter((e) => (filter === "all" ? true : filter === "availability" ? AVAILABILITY.has(e.type) : e.type === "price_change")),
     [events, filter],
   );
 
@@ -121,65 +109,49 @@ export function EventFeed({ events, now }: { events: FeedEvent[]; now: number })
           <ul className="space-y-2.5">
             {visible.map((event, i) => {
               const m = meta(event.type);
-              const showPrice =
-                event.priceCents !== null && (RESTOCK.has(event.type) || event.type === "price_change");
+              const showPrice = event.priceCents !== null && (RESTOCK.has(event.type) || event.type === "price_change");
               const duration = durations.get(event);
               const isNew = i === 0 && filter === "all" && now - event.createdAt < NEW_WINDOW_MS;
               // Only "Bestellbar" entries link out — that's where a click leads
               // to something you can actually buy.
               const href = RESTOCK.has(event.type) ? event.url : null;
               const cardClass = `flex flex-1 items-start justify-between gap-3 rounded-xl border border-slate-200 bg-white px-4 py-2.5 shadow-sm dark:border-slate-800 dark:bg-slate-900 ${
-                href
-                  ? "transition-[border-color,box-shadow] hover:border-sky-300 hover:shadow-md dark:hover:border-sky-700"
-                  : ""
+                href ? "transition-[border-color,box-shadow] hover:border-sky-300 hover:shadow-md dark:hover:border-sky-700" : ""
               }`;
               const inner = (
                 <>
                   <div className="min-w-0">
-                      <div className="flex flex-wrap items-center gap-x-1.5 gap-y-0.5 text-xs">
-                        <span className={`font-semibold uppercase tracking-wide ${m.labelClass}`}>
-                          {m.label}
+                    <div className="flex flex-wrap items-center gap-x-1.5 gap-y-0.5 text-xs">
+                      <span className={`font-semibold uppercase tracking-wide ${m.labelClass}`}>{m.label}</span>
+                      {isNew && (
+                        <span className="rounded bg-amber-100 px-1.5 py-0.5 text-[10px] font-semibold text-amber-700 dark:bg-amber-500/15 dark:text-amber-400">
+                          Neu
                         </span>
-                        {isNew && (
-                          <span className="rounded bg-amber-100 px-1.5 py-0.5 text-[10px] font-semibold text-amber-700 dark:bg-amber-500/15 dark:text-amber-400">
-                            Neu
-                          </span>
-                        )}
-                        <span className="text-slate-400 dark:text-slate-500">
-                          bei{" "}
-                          <span className="text-slate-600 dark:text-slate-300">
-                            {event.retailerName}
-                            {event.storeName ? ` ${event.storeName}` : ""}
-                          </span>
+                      )}
+                      <span className="text-slate-400 dark:text-slate-500">
+                        bei{" "}
+                        <span className="text-slate-600 dark:text-slate-300">
+                          {event.retailerName}
+                          {event.storeName ? ` ${event.storeName}` : ""}
                         </span>
-                        <span className="text-slate-300 dark:text-slate-600">·</span>
-                        <span className="text-slate-400 dark:text-slate-500">
-                          {formatDateTime(event.createdAt)}
-                        </span>
-                        {duration != null && (
-                          <>
-                            <span className="text-slate-300 dark:text-slate-600">·</span>
-                            <span className="text-slate-400 dark:text-slate-500">
-                              {formatDuration(duration)} verfügbar
-                            </span>
-                          </>
-                        )}
-                      </div>
-                      <p className="mt-0.5 truncate font-medium text-slate-900 dark:text-slate-100">
-                        {event.variantName}
-                      </p>
-                      <p className="text-[11px] text-slate-400 dark:text-slate-500">
-                        <RelativeTime
-                          timestamp={event.createdAt}
-                          initial={formatRelativeTime(event.createdAt, now)}
-                        />
-                      </p>
+                      </span>
+                      <span className="text-slate-300 dark:text-slate-600">·</span>
+                      <span className="text-slate-400 dark:text-slate-500">{formatDateTime(event.createdAt)}</span>
+                      {duration != null && (
+                        <>
+                          <span className="text-slate-300 dark:text-slate-600">·</span>
+                          <span className="text-slate-400 dark:text-slate-500">{formatDuration(duration)} verfügbar</span>
+                        </>
+                      )}
                     </div>
+                    <p className="mt-0.5 truncate font-medium text-slate-900 dark:text-slate-100">{event.variantName}</p>
+                    <p className="text-[11px] text-slate-400 dark:text-slate-500">
+                      <RelativeTime timestamp={event.createdAt} initial={formatRelativeTime(event.createdAt, now)} />
+                    </p>
+                  </div>
                   <div className="flex shrink-0 items-center gap-1.5 self-center">
                     {showPrice && (
-                      <span className="tabular-nums font-semibold text-slate-900 dark:text-slate-100">
-                        {formatPrice(event.priceCents)}
-                      </span>
+                      <span className="tabular-nums font-semibold text-slate-900 dark:text-slate-100">{formatPrice(event.priceCents)}</span>
                     )}
                     {href && (
                       <svg
@@ -197,10 +169,8 @@ export function EventFeed({ events, now }: { events: FeedEvent[]; now: number })
                 </>
               );
               return (
-                <li key={i} className="relative flex items-start gap-3">
-                  <span
-                    className={`relative z-10 mt-0.5 flex h-7 w-7 shrink-0 items-center justify-center rounded-full text-white ${m.circle}`}
-                  >
+                <li key={event.createdAt} className="relative flex items-start gap-3">
+                  <span className={`relative z-10 mt-0.5 flex h-7 w-7 shrink-0 items-center justify-center rounded-full text-white ${m.circle}`}>
                     {m.icon}
                   </span>
                   {href ? (

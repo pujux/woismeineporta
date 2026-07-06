@@ -12,12 +12,7 @@ export interface PrevState {
   storeStock: Map<string, boolean>;
 }
 
-export type StockEventType =
-  | "online_restock"
-  | "online_soldout"
-  | "price_change"
-  | "store_restock"
-  | "store_soldout";
+export type StockEventType = "online_restock" | "online_soldout" | "price_change" | "store_restock" | "store_soldout";
 
 export interface StockEvent {
   type: StockEventType;

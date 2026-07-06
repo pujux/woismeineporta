@@ -1,12 +1,5 @@
 import { beforeEach, describe, expect, it, vi } from "vitest";
-import {
-  CheckRunEntity,
-  EmailSubscriptionEntity,
-  EventEntity,
-  NotificationLogEntity,
-  OfferEntity,
-  type AppDb,
-} from "@/db";
+import { CheckRunEntity, EmailSubscriptionEntity, EventEntity, NotificationLogEntity, OfferEntity, type AppDb } from "@/db";
 import { createTestDb } from "@/db/test-utils";
 import { AdapterHttpError } from "@/lib/retailers/fetch";
 import type { RetailerAdapter, RetailerResult } from "@/lib/retailers/types";
@@ -14,13 +7,15 @@ import { createPollerState, pruneOldData, runTick } from "@/lib/poller";
 
 const okResult = (slug: string): RetailerResult => ({
   retailerSlug: slug,
-  offers: [
-    { variant: "portasplit", url: `https://${slug}.at/p`, priceCents: 89999, status: "in_stock" },
-  ],
+  offers: [{ variant: "portasplit", url: `https://${slug}.at/p`, priceCents: 89999, status: "in_stock" }],
   storeStock: null,
 });
 
-function fakeAdapter(slug: string, tier: "fast" | "slow", impl?: () => Promise<RetailerResult>): RetailerAdapter & { check: ReturnType<typeof vi.fn> } {
+function fakeAdapter(
+  slug: string,
+  tier: "fast" | "slow",
+  impl?: () => Promise<RetailerResult>,
+): RetailerAdapter & { check: ReturnType<typeof vi.fn> } {
   return {
     slug,
     tier,
@@ -160,9 +155,36 @@ describe("runTick", () => {
       { channel: "push", subscriptionId: 1, dedupeKey: "k", sentAt: now - 1 * day },
     ]);
     await db.getRepository(EmailSubscriptionEntity).insert([
-      { email: "stale@x.at", confirmToken: "a", unsubscribeToken: "b", confirmed: false, variantSlugs: "[]", zip: null, radiusKm: null, createdAt: now - 8 * day },
-      { email: "confirmed-old@x.at", confirmToken: "c", unsubscribeToken: "d", confirmed: true, variantSlugs: "[]", zip: null, radiusKm: null, createdAt: now - 8 * day },
-      { email: "fresh@x.at", confirmToken: "e", unsubscribeToken: "f", confirmed: false, variantSlugs: "[]", zip: null, radiusKm: null, createdAt: now - 1 * day },
+      {
+        email: "stale@x.at",
+        confirmToken: "a",
+        unsubscribeToken: "b",
+        confirmed: false,
+        variantSlugs: "[]",
+        zip: null,
+        radiusKm: null,
+        createdAt: now - 8 * day,
+      },
+      {
+        email: "confirmed-old@x.at",
+        confirmToken: "c",
+        unsubscribeToken: "d",
+        confirmed: true,
+        variantSlugs: "[]",
+        zip: null,
+        radiusKm: null,
+        createdAt: now - 8 * day,
+      },
+      {
+        email: "fresh@x.at",
+        confirmToken: "e",
+        unsubscribeToken: "f",
+        confirmed: false,
+        variantSlugs: "[]",
+        zip: null,
+        radiusKm: null,
+        createdAt: now - 1 * day,
+      },
     ]);
 
     await pruneOldData(db, now);

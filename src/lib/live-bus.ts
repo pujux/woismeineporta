@@ -12,7 +12,7 @@ const globalForBus = globalThis as unknown as { __liveBus?: EventEmitter };
 export const liveBus: EventEmitter = globalForBus.__liveBus ?? new EventEmitter();
 liveBus.setMaxListeners(0); // one listener per open SSE connection
 
-if (!globalForBus.__liveBus) globalForBus.__liveBus = liveBus;
+globalForBus.__liveBus ??= liveBus;
 
 export function emitChange(): void {
   liveBus.emit("change");

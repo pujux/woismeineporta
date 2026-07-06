@@ -1,10 +1,4 @@
-import {
-  CheckRunEntity,
-  EmailSubscriptionEntity,
-  EventEntity,
-  NotificationLogEntity,
-  type AppDb,
-} from "@/db";
+import { CheckRunEntity, EmailSubscriptionEntity, EventEntity, NotificationLogEntity, type AppDb } from "@/db";
 import { getDb } from "@/db";
 import { computeDiff } from "./diff";
 import { emitChange } from "./live-bus";
@@ -37,13 +31,13 @@ export function createPollerState(): PollerState {
 const MAX_BACKOFF_MS = 30 * 60_000;
 const FAILURES_BEFORE_UNKNOWN = 3;
 const HOUSEKEEPING_EVERY = 100;
-const EVENT_RETENTION_MS = 90 * 24 * 3600_000;
-const CHECK_RUN_RETENTION_MS = 7 * 24 * 3600_000;
+const EVENT_RETENTION_MS = 90 * 24 * 3_600_000;
+const CHECK_RUN_RETENTION_MS = 7 * 24 * 3_600_000;
 // notification_log is only read within the 60-min cooldown window; a week gives
 // debugging headroom. Unconfirmed email sign-ups that never opt in are dropped
 // (housekeeping + no reason to retain unconfirmed addresses).
-const NOTIFICATION_LOG_RETENTION_MS = 7 * 24 * 3600_000;
-const UNCONFIRMED_EMAIL_RETENTION_MS = 7 * 24 * 3600_000;
+const NOTIFICATION_LOG_RETENTION_MS = 7 * 24 * 3_600_000;
+const UNCONFIRMED_EMAIL_RETENTION_MS = 7 * 24 * 3_600_000;
 
 /** Deletes rows past their retention. Safe to call any time; idempotent. */
 export async function pruneOldData(db: AppDb, now: number): Promise<void> {
@@ -56,9 +50,7 @@ export async function pruneOldData(db: AppDb, now: number): Promise<void> {
   await olderThan("created_at", EVENT_RETENTION_MS).from(EventEntity).execute();
   await olderThan("started_at", CHECK_RUN_RETENTION_MS).from(CheckRunEntity).execute();
   await olderThan("sent_at", NOTIFICATION_LOG_RETENTION_MS).from(NotificationLogEntity).execute();
-  await olderThan("created_at", UNCONFIRMED_EMAIL_RETENTION_MS, "confirmed = 0")
-    .from(EmailSubscriptionEntity)
-    .execute();
+  await olderThan("created_at", UNCONFIRMED_EMAIL_RETENTION_MS, "confirmed = 0").from(EmailSubscriptionEntity).execute();
 }
 
 interface TickOptions {
@@ -77,7 +69,7 @@ let tickCounter = 0;
 let running = false;
 
 function envInt(name: string, fallback: number): number {
-  const value = parseInt(process.env[name] ?? "", 10);
+  const value = Number.parseInt(process.env[name] ?? "", 10);
   return Number.isFinite(value) && value > 0 ? value : fallback;
 }
 

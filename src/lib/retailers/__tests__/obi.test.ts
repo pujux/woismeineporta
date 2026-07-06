@@ -26,9 +26,7 @@ describe("obiAdapter", () => {
     const base = result.offers.find((o) => o.variant === "portasplit")!;
     expect(base.status).toBe("out_of_stock"); // InStoreOnly => not orderable online
     expect(base.priceCents).toBe(89999);
-    expect(base.url).toBe(
-      "https://www.obi.at/p/3586245/midea-mobile-split-klimaanlage-portasplit",
-    );
+    expect(base.url).toBe("https://www.obi.at/p/3586245/midea-mobile-split-klimaanlage-portasplit");
 
     const cool = result.offers.find((o) => o.variant === "portasplit-cool")!;
     expect(cool.status).toBe("out_of_stock");
@@ -36,9 +34,7 @@ describe("obiAdapter", () => {
 
     // 79 stores x 2 variants
     expect(result.storeStock).toHaveLength(158);
-    const sample = result.storeStock!.find(
-      (s) => s.store.externalId === "002" && s.variant === "portasplit",
-    )!;
+    const sample = result.storeStock!.find((s) => s.store.externalId === "002" && s.variant === "portasplit")!;
     expect(sample.store.name).toBe("Sankt Veit");
     expect(sample.store.zip).toBe("9300");
     expect(sample.store.lat).toBeCloseTo(46.74786, 3);
@@ -46,12 +42,8 @@ describe("obiAdapter", () => {
   });
 
   it("reports stock when quantities are positive", async () => {
-    const result = await obiAdapter.check(
-      obiFetch("obi-stock-portasplit-instock-synthetic.json"),
-    );
-    const inStock = result.storeStock!.filter(
-      (s) => s.variant === "portasplit" && s.inStock,
-    );
+    const result = await obiAdapter.check(obiFetch("obi-stock-portasplit-instock-synthetic.json"));
+    const inStock = result.storeStock!.filter((s) => s.variant === "portasplit" && s.inStock);
     expect(inStock.length).toBe(3);
   });
 
