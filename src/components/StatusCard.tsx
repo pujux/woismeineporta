@@ -32,7 +32,7 @@ export function StatusCard({
       href={offer.url}
       target="_blank"
       rel="nofollow noopener"
-      className="group flex items-center justify-between gap-3 rounded-xl border border-slate-200 bg-white px-4 py-3 shadow-sm transition-[border-color,box-shadow] hover:border-sky-300 hover:shadow-md dark:border-slate-800 dark:bg-slate-900 dark:hover:border-sky-700"
+      className="flex items-center justify-between gap-3 rounded-xl border border-slate-200 bg-white px-4 py-3 shadow-sm transition-[border-color,box-shadow] hover:border-sky-300 hover:shadow-md dark:border-slate-800 dark:bg-slate-900 dark:hover:border-sky-700"
     >
       <div className="min-w-0">
         <div className="flex flex-wrap items-center gap-2">
@@ -60,9 +60,7 @@ export function StatusCard({
         <div className="font-semibold tabular-nums text-slate-900 dark:text-slate-100">
           {formatPrice(offer.priceCents)}
         </div>
-        <div className="text-xs text-sky-600 transition-transform duration-150 group-hover:translate-x-0.5 dark:text-sky-400">
-          Zum Shop →
-        </div>
+        <div className="text-xs text-sky-600 dark:text-sky-400">Zum Shop →</div>
       </div>
     </a>
   );
