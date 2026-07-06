@@ -190,6 +190,8 @@ export interface EmailSubscription {
   zip: string | null;
   radiusKm: number | null;
   createdAt: number;
+  /** When the last confirmation mail was sent — throttles re-sends. */
+  confirmSentAt: number;
 }
 export const EmailSubscriptionEntity = new EntitySchema<EmailSubscription>({
   name: "email_subscription",
@@ -204,6 +206,7 @@ export const EmailSubscriptionEntity = new EntitySchema<EmailSubscription>({
     zip: { type: "text", nullable: true },
     radiusKm: { type: "integer", name: "radius_km", nullable: true },
     createdAt: { type: "integer", name: "created_at" },
+    confirmSentAt: { type: "integer", name: "confirm_sent_at", default: 0 },
   },
 });
 

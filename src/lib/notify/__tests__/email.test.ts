@@ -34,15 +34,48 @@ describe("email subscriptions", () => {
     expect(html).toContain(`/api/subscribe/email/confirm?token=${row.confirmToken}`);
   });
 
-  it("re-sends with a fresh token for duplicate emails", async () => {
-    await createEmailSubscription(db, { email: "a@b.at", variantSlugs: ["portasplit"] }, send);
+  it("throttles rapid re-signups, then resends after the window", async () => {
+    await createEmailSubscription(db, { email: "a@b.at", variantSlugs: ["portasplit"] }, send, 1000);
     const first = await db.getRepository(EmailSubscriptionEntity).findOneByOrFail({ email: "a@b.at" });
-    const result = await createEmailSubscription(db, { email: "a@b.at", variantSlugs: ["portasplit"] }, send);
-    expect(result).toBe("resent");
+
+    // Within the 2-min window: prefs update, but NO second mail (anti-bombing).
+    const r2 = await createEmailSubscription(
+      db,
+      { email: "a@b.at", variantSlugs: ["portasplit", "portasplit-cool"] },
+      send,
+      1000 + 60_000,
+    );
+    expect(r2).toBe("resent");
+    expect(send).toHaveBeenCalledTimes(1);
     const second = await db.getRepository(EmailSubscriptionEntity).findOneByOrFail({ email: "a@b.at" });
-    expect(second.confirmToken).not.toBe(first.confirmToken);
+    expect(second.confirmToken).toBe(first.confirmToken);
+    expect(JSON.parse(second.variantSlugs)).toHaveLength(2); // prefs still updated
+
+    // After the window: fresh token + a real resend.
+    await createEmailSubscription(db, { email: "a@b.at", variantSlugs: ["portasplit"] }, send, 1000 + 3 * 60_000);
     expect(send).toHaveBeenCalledTimes(2);
+    const third = await db.getRepository(EmailSubscriptionEntity).findOneByOrFail({ email: "a@b.at" });
+    expect(third.confirmToken).not.toBe(first.confirmToken);
     expect(await db.getRepository(EmailSubscriptionEntity).count()).toBe(1);
+  });
+
+  it("never re-sends a confirmation to an already-confirmed address", async () => {
+    await createEmailSubscription(db, { email: "a@b.at", variantSlugs: ["portasplit"] }, send, 1000);
+    const row = await db.getRepository(EmailSubscriptionEntity).findOneByOrFail({ email: "a@b.at" });
+    await confirmEmail(db, row.confirmToken);
+    send.mockClear();
+
+    const result = await createEmailSubscription(
+      db,
+      { email: "a@b.at", variantSlugs: ["portasplit", "portasplit-cool"] },
+      send,
+      9_999_999_999,
+    );
+    expect(result).toBe("resent");
+    expect(send).not.toHaveBeenCalled();
+    const after = await db.getRepository(EmailSubscriptionEntity).findOneByOrFail({ email: "a@b.at" });
+    expect(after.confirmed).toBe(true);
+    expect(JSON.parse(after.variantSlugs)).toHaveLength(2);
   });
 
   it("rejects invalid emails and variants without sending", async () => {

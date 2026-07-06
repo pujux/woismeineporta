@@ -2,16 +2,26 @@ import { NextResponse } from "next/server";
 import { getDb } from "@/db";
 import { createEmailSubscription } from "@/lib/notify/email";
 
-// naive per-IP rate limit: 5 requests/minute
+// Per-IP rate limit: 5 requests/minute. In-memory (single container); the map
+// is swept each call so idle IPs don't accumulate.
+const WINDOW_MS = 60_000;
+const MAX_PER_WINDOW = 5;
 const hits = new Map<string, number[]>();
+
 function rateLimited(ip: string, now = Date.now()): boolean {
-  const recent = (hits.get(ip) ?? []).filter((t) => now - t < 60_000);
+  for (const [key, times] of hits) {
+    const fresh = times.filter((t) => now - t < WINDOW_MS);
+    if (fresh.length) hits.set(key, fresh);
+    else hits.delete(key);
+  }
+  const recent = hits.get(ip) ?? [];
   recent.push(now);
   hits.set(ip, recent);
-  return recent.length > 5;
+  return recent.length > MAX_PER_WINDOW;
 }
 
 export async function POST(request: Request) {
+  // Trustworthy only behind the reverse proxy (Traefik/Dokploy sets XFF).
   const ip = request.headers.get("x-forwarded-for")?.split(",")[0]?.trim() ?? "local";
   if (rateLimited(ip)) {
     return NextResponse.json({ error: "zu viele Anfragen" }, { status: 429 });

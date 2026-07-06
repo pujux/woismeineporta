@@ -24,10 +24,27 @@ function baseUrl(): string {
 
 const EMAIL_RE = /^[^\s@]+@[^\s@]+\.[^\s@]{2,}$/;
 
+// Don't re-send a confirmation to the same address more than once per window —
+// blocks using the form to email-bomb a victim and limits Resend quota abuse.
+const RESEND_THROTTLE_MS = 2 * 60_000;
+
+async function sendConfirmMail(send: SendFn, email: string, confirmToken: string): Promise<void> {
+  const confirmUrl = `${baseUrl()}/api/subscribe/email/confirm?token=${confirmToken}`;
+  await send(
+    email,
+    "Bitte bestätigen: PortaSplit-Alarm",
+    `<p>Servus!</p>
+     <p>Klick auf den Link, um deinen PortaSplit-Verfügbarkeits-Alarm zu aktivieren:</p>
+     <p><a href="${confirmUrl}">Alarm aktivieren</a></p>
+     <p>Falls du das nicht warst, ignorier diese E-Mail einfach.</p>`,
+  );
+}
+
 export async function createEmailSubscription(
   db: AppDb,
   input: { email: string; variantSlugs: string[]; zip?: string; radiusKm?: number },
   send: SendFn = defaultSend,
+  now: number = Date.now(),
 ): Promise<"created" | "resent" | "invalid"> {
   const email = input.email?.trim().toLowerCase();
   if (!email || !EMAIL_RE.test(email)) return "invalid";
@@ -47,40 +64,41 @@ export async function createEmailSubscription(
   }
 
   const repo = db.getRepository(EmailSubscriptionEntity);
+  const variantSlugs = JSON.stringify([...new Set(input.variantSlugs)]);
   const existing = await repo.findOneBy({ email });
-  const confirmToken = crypto.randomUUID();
-  const unsubscribeToken = existing?.unsubscribeToken ?? crypto.randomUUID();
 
   if (existing) {
-    await repo.update(existing.id, {
-      confirmToken,
-      variantSlugs: JSON.stringify([...new Set(input.variantSlugs)]),
-      zip,
-      radiusKm,
-    });
-  } else {
-    await repo.insert({
-      email,
-      confirmToken,
-      unsubscribeToken,
-      confirmed: false,
-      variantSlugs: JSON.stringify([...new Set(input.variantSlugs)]),
-      zip,
-      radiusKm,
-      createdAt: Date.now(),
-    });
+    // Already subscribed: just update preferences, never re-send a confirm mail.
+    if (existing.confirmed) {
+      await repo.update(existing.id, { variantSlugs, zip, radiusKm });
+      return "resent";
+    }
+    // Unconfirmed but a confirm mail went out recently: update prefs, don't
+    // re-send (anti-bombing). The response is identical so we don't leak state.
+    if (existing.confirmSentAt && now - existing.confirmSentAt < RESEND_THROTTLE_MS) {
+      await repo.update(existing.id, { variantSlugs, zip, radiusKm });
+      return "resent";
+    }
+    const confirmToken = crypto.randomUUID();
+    await repo.update(existing.id, { confirmToken, variantSlugs, zip, radiusKm, confirmSentAt: now });
+    await sendConfirmMail(send, email, confirmToken);
+    return "resent";
   }
 
-  const confirmUrl = `${baseUrl()}/api/subscribe/email/confirm?token=${confirmToken}`;
-  await send(
+  const confirmToken = crypto.randomUUID();
+  await repo.insert({
     email,
-    "Bitte bestätigen: PortaSplit-Alarm",
-    `<p>Servus!</p>
-     <p>Klick auf den Link, um deinen PortaSplit-Verfügbarkeits-Alarm zu aktivieren:</p>
-     <p><a href="${confirmUrl}">Alarm aktivieren</a></p>
-     <p>Falls du das nicht warst, ignorier diese E-Mail einfach.</p>`,
-  );
-  return existing ? "resent" : "created";
+    confirmToken,
+    unsubscribeToken: crypto.randomUUID(),
+    confirmed: false,
+    variantSlugs,
+    zip,
+    radiusKm,
+    createdAt: now,
+    confirmSentAt: now,
+  });
+  await sendConfirmMail(send, email, confirmToken);
+  return "created";
 }
 
 export async function confirmEmail(db: AppDb, token: string): Promise<boolean> {
