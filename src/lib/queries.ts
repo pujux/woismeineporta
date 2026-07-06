@@ -60,6 +60,7 @@ export interface FeedEvent {
   storeName: string | null;
   priceCents: number | null;
   createdAt: number;
+  url: string | null;
 }
 
 export async function getRecentEvents(db: AppDb, limit = 30): Promise<FeedEvent[]> {
@@ -78,6 +79,12 @@ export async function getRecentEvents(db: AppDb, limit = 30): Promise<FeedEvent[
     ? await db.getRepository(StoreEntity).createQueryBuilder("s").where("s.id IN (:...ids)", { ids: storeIds }).getMany()
     : [];
   const storeById = new Map(stores.map((s) => [s.id, s.name]));
+  const urlByOffer = new Map(
+    (await db.getRepository(OfferEntity).find()).map((o) => [
+      `${o.retailerSlug}:${o.variantSlug}`,
+      o.url,
+    ]),
+  );
 
   return events.map((e) => ({
     type: e.type,
@@ -86,6 +93,7 @@ export async function getRecentEvents(db: AppDb, limit = 30): Promise<FeedEvent[
     storeName: e.storeId !== null ? (storeById.get(e.storeId) ?? null) : null,
     priceCents: e.priceCents,
     createdAt: e.createdAt,
+    url: urlByOffer.get(`${e.retailerSlug}:${e.variantSlug}`) ?? null,
   }));
 }
 

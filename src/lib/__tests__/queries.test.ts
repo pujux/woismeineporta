@@ -60,8 +60,10 @@ describe("queries", () => {
       variantName: "Midea PortaSplit",
       storeName: "Wien 10",
       createdAt: 5000,
+      url: "https://www.obi.at/p/1",
     });
     expect(events[1].storeName).toBeNull();
+    expect(events[1].url).toBe("https://www.obi.at/p/1");
   });
 
   it("findStoresNear filters by radius and sorts in-stock first", async () => {

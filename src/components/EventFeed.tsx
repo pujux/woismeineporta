@@ -125,15 +125,17 @@ export function EventFeed({ events, now }: { events: FeedEvent[]; now: number })
                 event.priceCents !== null && (RESTOCK.has(event.type) || event.type === "price_change");
               const duration = durations.get(event);
               const isNew = i === 0 && filter === "all" && now - event.createdAt < NEW_WINDOW_MS;
-              return (
-                <li key={i} className="relative flex items-start gap-3">
-                  <span
-                    className={`relative z-10 mt-0.5 flex h-7 w-7 shrink-0 items-center justify-center rounded-full text-white ${m.circle}`}
-                  >
-                    {m.icon}
-                  </span>
-                  <div className="flex flex-1 items-start justify-between gap-3 rounded-xl border border-slate-200 bg-white px-4 py-2.5 shadow-sm dark:border-slate-800 dark:bg-slate-900">
-                    <div className="min-w-0">
+              // Only "Bestellbar" entries link out — that's where a click leads
+              // to something you can actually buy.
+              const href = RESTOCK.has(event.type) ? event.url : null;
+              const cardClass = `flex flex-1 items-start justify-between gap-3 rounded-xl border border-slate-200 bg-white px-4 py-2.5 shadow-sm dark:border-slate-800 dark:bg-slate-900 ${
+                href
+                  ? "transition-[border-color,box-shadow] hover:border-sky-300 hover:shadow-md dark:hover:border-sky-700"
+                  : ""
+              }`;
+              const inner = (
+                <>
+                  <div className="min-w-0">
                       <div className="flex flex-wrap items-center gap-x-1.5 gap-y-0.5 text-xs">
                         <span className={`font-semibold uppercase tracking-wide ${m.labelClass}`}>
                           {m.label}
@@ -173,12 +175,41 @@ export function EventFeed({ events, now }: { events: FeedEvent[]; now: number })
                         />
                       </p>
                     </div>
+                  <div className="flex shrink-0 items-center gap-1.5 self-center">
                     {showPrice && (
-                      <div className="shrink-0 self-center tabular-nums font-semibold text-slate-900 dark:text-slate-100">
+                      <span className="tabular-nums font-semibold text-slate-900 dark:text-slate-100">
                         {formatPrice(event.priceCents)}
-                      </div>
+                      </span>
+                    )}
+                    {href && (
+                      <svg
+                        viewBox="0 0 24 24"
+                        fill="none"
+                        stroke="currentColor"
+                        strokeWidth="2"
+                        className="h-4 w-4 text-slate-400 dark:text-slate-500"
+                        aria-hidden
+                      >
+                        <path d="m9 18 6-6-6-6" strokeLinecap="round" strokeLinejoin="round" />
+                      </svg>
                     )}
                   </div>
+                </>
+              );
+              return (
+                <li key={i} className="relative flex items-start gap-3">
+                  <span
+                    className={`relative z-10 mt-0.5 flex h-7 w-7 shrink-0 items-center justify-center rounded-full text-white ${m.circle}`}
+                  >
+                    {m.icon}
+                  </span>
+                  {href ? (
+                    <a href={href} target="_blank" rel="nofollow noopener" className={cardClass}>
+                      {inner}
+                    </a>
+                  ) : (
+                    <div className={cardClass}>{inner}</div>
+                  )}
                 </li>
               );
             })}
