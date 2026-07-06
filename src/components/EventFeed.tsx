@@ -25,7 +25,7 @@ function line(event: FeedEvent): { icon: string; text: string } {
 export function EventFeed({ events, now }: { events: FeedEvent[]; now: number }) {
   if (events.length === 0) {
     return (
-      <p className="text-sm text-slate-500">
+      <p className="text-sm text-slate-500 dark:text-slate-400">
         Noch keine Änderungen beobachtet — sobald sich bei einem Händler etwas tut, steht es hier.
       </p>
     );
@@ -37,8 +37,8 @@ export function EventFeed({ events, now }: { events: FeedEvent[]; now: number })
         return (
           <li key={i} className="flex items-baseline gap-2 text-sm">
             <span aria-hidden>{l.icon}</span>
-            <span className="text-slate-800">{l.text}</span>
-            <span className="ml-auto shrink-0 text-xs text-slate-400">
+            <span className="text-slate-800 dark:text-slate-200">{l.text}</span>
+            <span className="ml-auto shrink-0 text-xs text-slate-400 dark:text-slate-500">
               {formatRelativeTime(event.createdAt, now)}
             </span>
           </li>

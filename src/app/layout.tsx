@@ -16,7 +16,10 @@ export const metadata: Metadata = {
 };
 
 export const viewport: Viewport = {
-  themeColor: "#0284c7",
+  themeColor: [
+    { media: "(prefers-color-scheme: light)", color: "#0284c7" },
+    { media: "(prefers-color-scheme: dark)", color: "#020617" },
+  ],
 };
 
 export default function RootLayout({
@@ -26,25 +29,25 @@ export default function RootLayout({
 }>) {
   return (
     <html lang="de" className={`${geistSans.variable} h-full antialiased`}>
-      <body className="min-h-screen bg-slate-50 font-sans text-slate-900">
+      <body className="min-h-screen bg-slate-50 font-sans text-slate-900 dark:bg-slate-950 dark:text-slate-100">
         {children}
-        <footer className="mx-auto mt-16 max-w-3xl border-t border-slate-200 px-4 py-8 text-xs text-slate-400">
+        <footer className="mx-auto mt-16 max-w-3xl border-t border-slate-200 px-4 py-8 text-xs text-slate-400 dark:border-slate-800 dark:text-slate-500">
           <p>
             Kein Shop — wir beobachten nur Verfügbarkeiten und verlinken zu den Händlern. Alle
             Angaben ohne Gewähr, Preise können abweichen.
           </p>
           <p className="mt-2">
             PLZ-Daten:{" "}
-            <a className="underline" href="https://www.geonames.org/" rel="noopener">
+            <a className="underline hover:text-slate-600 dark:hover:text-slate-300" href="https://www.geonames.org/" rel="noopener">
               GeoNames
             </a>{" "}
             (CC BY 4.0)
           </p>
           <p className="mt-2 space-x-3">
-            <Link className="underline" href="/impressum">
+            <Link className="underline hover:text-slate-600 dark:hover:text-slate-300" href="/impressum">
               Impressum
             </Link>
-            <Link className="underline" href="/datenschutz">
+            <Link className="underline hover:text-slate-600 dark:hover:text-slate-300" href="/datenschutz">
               Datenschutz
             </Link>
           </p>

@@ -9,6 +9,9 @@ const VARIANTS = [
 
 const RADII = [10, 25, 50, 100] as const;
 
+const INPUT_CLASSES =
+  "rounded-lg border border-slate-300 bg-white px-3 py-2 text-sm text-slate-900 placeholder:text-slate-400 focus:border-sky-500 focus:outline-none dark:border-slate-700 dark:bg-slate-900 dark:text-slate-100 dark:placeholder:text-slate-500";
+
 function urlBase64ToUint8Array(base64: string): Uint8Array {
   const padding = "=".repeat((4 - (base64.length % 4)) % 4);
   const raw = atob((base64 + padding).replace(/-/g, "+").replace(/_/g, "/"));
@@ -125,15 +128,20 @@ export function SubscribePanel() {
   }
 
   return (
-    <div className="rounded-2xl border border-sky-200 bg-sky-50 p-5">
-      <h2 className="text-lg font-semibold">🔔 Sofort-Alarm, wenn&apos;s eine gibt</h2>
-      <p className="mt-1 text-sm text-slate-600">
+    <div className="rounded-2xl border border-sky-200 bg-gradient-to-b from-sky-50 to-white p-5 shadow-sm dark:border-sky-900/60 dark:from-sky-950/60 dark:to-slate-900">
+      <h2 className="text-lg font-semibold text-slate-900 dark:text-slate-100">
+        🔔 Sofort-Alarm, wenn&apos;s eine gibt
+      </h2>
+      <p className="mt-1 text-sm text-slate-600 dark:text-slate-400">
         Wir sagen dir binnen Sekunden Bescheid, sobald eine PortaSplit wieder bestellbar ist.
       </p>
 
       <div className="mt-4 flex flex-wrap gap-4">
         {VARIANTS.map((v) => (
-          <label key={v.slug} className="flex items-center gap-2 text-sm">
+          <label
+            key={v.slug}
+            className="flex items-center gap-2 text-sm text-slate-800 dark:text-slate-200"
+          >
             <input
               type="checkbox"
               checked={variants.includes(v.slug)}
@@ -151,7 +159,7 @@ export function SubscribePanel() {
 
       <details className="mt-3" open={storeAlert}>
         <summary
-          className="cursor-pointer text-sm text-sky-700"
+          className="cursor-pointer text-sm text-sky-700 hover:text-sky-800 dark:text-sky-400 dark:hover:text-sky-300"
           onClick={(e) => {
             e.preventDefault();
             setStoreAlert((s) => !s);
@@ -168,13 +176,13 @@ export function SubscribePanel() {
               inputMode="numeric"
               placeholder="PLZ"
               aria-label="PLZ für Filial-Alarm"
-              className="w-24 rounded-lg border border-slate-300 px-3 py-1.5 text-sm"
+              className={`w-24 ${INPUT_CLASSES}`}
             />
             <select
               value={radiusKm}
               onChange={(e) => setRadiusKm(Number(e.target.value))}
               aria-label="Radius für Filial-Alarm"
-              className="rounded-lg border border-slate-300 px-2 py-1.5 text-sm"
+              className={INPUT_CLASSES}
             >
               {RADII.map((r) => (
                 <option key={r} value={r}>
@@ -186,34 +194,41 @@ export function SubscribePanel() {
         )}
       </details>
 
-      <div className="mt-4 flex flex-col gap-3 sm:flex-row sm:items-start">
+      <div className="mt-5 flex flex-col gap-3 sm:flex-row sm:items-start">
         <div className="flex-1">
           {pushState === "subscribed" ? (
             <div className="text-sm">
-              <span className="font-medium text-green-700">Push-Alarm aktiv ✓</span>
-              <button onClick={disablePush} className="ml-3 text-slate-500 underline">
+              <span className="font-medium text-green-700 dark:text-green-400">
+                Push-Alarm aktiv ✓
+              </span>
+              <button
+                onClick={disablePush}
+                className="ml-3 text-slate-500 underline hover:text-slate-700 dark:text-slate-400 dark:hover:text-slate-200"
+              >
                 Deaktivieren
               </button>
             </div>
           ) : pushState === "denied" ? (
-            <p className="text-sm text-slate-500">
+            <p className="text-sm text-slate-500 dark:text-slate-400">
               Push ist in deinem Browser blockiert — erlaube Benachrichtigungen in den
               Website-Einstellungen.
             </p>
           ) : pushState === "unsupported" ? (
-            <p className="text-sm text-slate-500">Dein Browser unterstützt keine Push-Benachrichtigungen.</p>
+            <p className="text-sm text-slate-500 dark:text-slate-400">
+              Dein Browser unterstützt keine Push-Benachrichtigungen.
+            </p>
           ) : (
             <button
               onClick={enablePush}
               disabled={pushState === "loading"}
-              className="w-full rounded-lg bg-sky-600 px-4 py-2 text-sm font-semibold text-white transition hover:bg-sky-700 disabled:opacity-50 sm:w-auto"
+              className="w-full rounded-lg bg-sky-600 px-4 py-2 text-sm font-semibold text-white shadow-sm transition hover:bg-sky-500 disabled:opacity-50 sm:w-auto"
             >
               {pushState === "loading" ? "…" : "🔔 Push-Alarm aktivieren"}
             </button>
           )}
-          {pushError && <p className="mt-1 text-xs text-red-600">{pushError}</p>}
+          {pushError && <p className="mt-1 text-xs text-red-600 dark:text-red-400">{pushError}</p>}
           {isIos && !isStandalone && pushState !== "subscribed" && (
-            <p className="mt-1 text-xs text-slate-500">
+            <p className="mt-1 text-xs text-slate-500 dark:text-slate-400">
               iPhone/iPad: Zuerst über „Teilen → Zum Home-Bildschirm" installieren, dann Push
               aktivieren.
             </p>
@@ -228,24 +243,26 @@ export function SubscribePanel() {
             onChange={(e) => setEmail(e.target.value)}
             placeholder="oder per E-Mail"
             aria-label="E-Mail-Adresse"
-            className="min-w-0 flex-1 rounded-lg border border-slate-300 px-3 py-2 text-sm focus:border-sky-500 focus:outline-none"
+            className={`min-w-0 flex-1 ${INPUT_CLASSES}`}
           />
           <button
             type="submit"
             disabled={emailState === "sending"}
-            className="rounded-lg border border-sky-600 px-3 py-2 text-sm font-semibold text-sky-700 transition hover:bg-sky-100 disabled:opacity-50"
+            className="rounded-lg border border-sky-600 px-3 py-2 text-sm font-semibold text-sky-700 transition hover:bg-sky-100 disabled:opacity-50 dark:border-sky-500 dark:text-sky-400 dark:hover:bg-sky-950"
           >
             {emailState === "sending" ? "…" : "Benachrichtigen"}
           </button>
         </form>
       </div>
       {emailState === "sent" && (
-        <p className="mt-2 text-sm text-green-700">
+        <p className="mt-2 text-sm text-green-700 dark:text-green-400">
           Bestätigungs-Mail verschickt — bitte Postfach checken (auch Spam). ✓
         </p>
       )}
       {emailState === "error" && (
-        <p className="mt-2 text-sm text-red-600">Das hat nicht geklappt — E-Mail-Adresse prüfen und nochmal versuchen.</p>
+        <p className="mt-2 text-sm text-red-600 dark:text-red-400">
+          Das hat nicht geklappt — E-Mail-Adresse prüfen und nochmal versuchen.
+        </p>
       )}
     </div>
   );

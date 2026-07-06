@@ -6,7 +6,7 @@ export default function Impressum() {
   return (
     <main className="mx-auto max-w-3xl px-4 pt-10">
       <h1 className="text-2xl font-bold">Impressum</h1>
-      <div className="prose prose-slate mt-6 text-sm leading-6 text-slate-700">
+      <div className="prose prose-slate mt-6 text-sm leading-6 text-slate-700 dark:text-slate-300">
         {/* TODO(Julian): Angaben gemäß §5 ECG / §25 MedienG ergänzen */}
         <p>
           <strong>[Vor- und Nachname / Firma]</strong>
