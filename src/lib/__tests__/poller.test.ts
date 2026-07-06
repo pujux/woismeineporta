@@ -1,9 +1,16 @@
 import { beforeEach, describe, expect, it, vi } from "vitest";
-import { CheckRunEntity, OfferEntity, type AppDb } from "@/db";
+import {
+  CheckRunEntity,
+  EmailSubscriptionEntity,
+  EventEntity,
+  NotificationLogEntity,
+  OfferEntity,
+  type AppDb,
+} from "@/db";
 import { createTestDb } from "@/db/test-utils";
 import { AdapterHttpError } from "@/lib/retailers/fetch";
 import type { RetailerAdapter, RetailerResult } from "@/lib/retailers/types";
-import { createPollerState, runTick } from "@/lib/poller";
+import { createPollerState, pruneOldData, runTick } from "@/lib/poller";
 
 const okResult = (slug: string): RetailerResult => ({
   retailerSlug: slug,
@@ -134,6 +141,38 @@ describe("runTick", () => {
     expect(fired).toBe(1);
 
     liveBus.off("change", onChange);
+  });
+
+  it("pruneOldData drops expired rows and keeps recent ones", async () => {
+    const now = 100 * 24 * 3600_000; // 100 days in
+    const day = 24 * 3600_000;
+
+    await db.getRepository(EventEntity).insert([
+      { type: "online_restock", retailerSlug: "obi", variantSlug: "portasplit", storeId: null, priceCents: 1, createdAt: now - 91 * day },
+      { type: "online_restock", retailerSlug: "obi", variantSlug: "portasplit", storeId: null, priceCents: 1, createdAt: now - 1 * day },
+    ]);
+    await db.getRepository(CheckRunEntity).insert([
+      { startedAt: now - 8 * day, durationMs: 1, summary: "{}" },
+      { startedAt: now - 1 * day, durationMs: 1, summary: "{}" },
+    ]);
+    await db.getRepository(NotificationLogEntity).insert([
+      { channel: "push", subscriptionId: 1, dedupeKey: "k", sentAt: now - 8 * day },
+      { channel: "push", subscriptionId: 1, dedupeKey: "k", sentAt: now - 1 * day },
+    ]);
+    await db.getRepository(EmailSubscriptionEntity).insert([
+      { email: "stale@x.at", confirmToken: "a", unsubscribeToken: "b", confirmed: false, variantSlugs: "[]", zip: null, radiusKm: null, createdAt: now - 8 * day },
+      { email: "confirmed-old@x.at", confirmToken: "c", unsubscribeToken: "d", confirmed: true, variantSlugs: "[]", zip: null, radiusKm: null, createdAt: now - 8 * day },
+      { email: "fresh@x.at", confirmToken: "e", unsubscribeToken: "f", confirmed: false, variantSlugs: "[]", zip: null, radiusKm: null, createdAt: now - 1 * day },
+    ]);
+
+    await pruneOldData(db, now);
+
+    expect(await db.getRepository(EventEntity).count()).toBe(1);
+    expect(await db.getRepository(CheckRunEntity).count()).toBe(1);
+    expect(await db.getRepository(NotificationLogEntity).count()).toBe(1);
+    // stale unconfirmed dropped; confirmed (any age) and fresh unconfirmed kept
+    const emails = (await db.getRepository(EmailSubscriptionEntity).find()).map((e) => e.email).sort();
+    expect(emails).toEqual(["confirmed-old@x.at", "fresh@x.at"]);
   });
 
   it("writes a check_runs row per tick", async () => {

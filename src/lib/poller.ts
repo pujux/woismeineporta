@@ -1,4 +1,10 @@
-import { CheckRunEntity, EventEntity, type AppDb } from "@/db";
+import {
+  CheckRunEntity,
+  EmailSubscriptionEntity,
+  EventEntity,
+  NotificationLogEntity,
+  type AppDb,
+} from "@/db";
 import { getDb } from "@/db";
 import { computeDiff } from "./diff";
 import { emitChange } from "./live-bus";
@@ -33,6 +39,27 @@ const FAILURES_BEFORE_UNKNOWN = 3;
 const HOUSEKEEPING_EVERY = 100;
 const EVENT_RETENTION_MS = 90 * 24 * 3600_000;
 const CHECK_RUN_RETENTION_MS = 7 * 24 * 3600_000;
+// notification_log is only read within the 60-min cooldown window; a week gives
+// debugging headroom. Unconfirmed email sign-ups that never opt in are dropped
+// (housekeeping + no reason to retain unconfirmed addresses).
+const NOTIFICATION_LOG_RETENTION_MS = 7 * 24 * 3600_000;
+const UNCONFIRMED_EMAIL_RETENTION_MS = 7 * 24 * 3600_000;
+
+/** Deletes rows past their retention. Safe to call any time; idempotent. */
+export async function pruneOldData(db: AppDb, now: number): Promise<void> {
+  const olderThan = (col: string, ms: number, extra = "") =>
+    db
+      .createQueryBuilder()
+      .delete()
+      .where(`${col} < :cutoff${extra ? ` AND ${extra}` : ""}`, { cutoff: now - ms });
+
+  await olderThan("created_at", EVENT_RETENTION_MS).from(EventEntity).execute();
+  await olderThan("started_at", CHECK_RUN_RETENTION_MS).from(CheckRunEntity).execute();
+  await olderThan("sent_at", NOTIFICATION_LOG_RETENTION_MS).from(NotificationLogEntity).execute();
+  await olderThan("created_at", UNCONFIRMED_EMAIL_RETENTION_MS, "confirmed = 0")
+    .from(EmailSubscriptionEntity)
+    .execute();
+}
 
 interface TickOptions {
   now: number;
@@ -109,18 +136,7 @@ export async function runTick(db: AppDb, opts: TickOptions): Promise<TickSummary
   if (summary.events > 0) emitChange();
 
   if (++tickCounter % HOUSEKEEPING_EVERY === 0) {
-    await db
-      .getRepository(EventEntity)
-      .createQueryBuilder()
-      .delete()
-      .where("created_at < :cutoff", { cutoff: now - EVENT_RETENTION_MS })
-      .execute();
-    await db
-      .getRepository(CheckRunEntity)
-      .createQueryBuilder()
-      .delete()
-      .where("started_at < :cutoff", { cutoff: now - CHECK_RUN_RETENTION_MS })
-      .execute();
+    await pruneOldData(db, now);
   }
 
   return summary;
