@@ -15,15 +15,22 @@ export async function GET(request: Request) {
       ? (variantParam as VariantSlug)
       : undefined;
 
+  // Store availability changes at most once per poll tick; cache per full URL
+  // (zip+radius+variant) for a short window. Ignored when no shared cache fronts it.
+  const cache = { "Cache-Control": "public, s-maxage=30, stale-while-revalidate=60" };
+
   // Without a ZIP: full store list for the map view.
   if (!zip) {
     const stores = await listAllStores(await getDb(), variant);
-    return NextResponse.json({ stores, center: null, radiusKm: null });
+    return NextResponse.json({ stores, center: null, radiusKm: null }, { headers: cache });
   }
 
   if (!/^\d{4}$/.test(zip) || !plzToLatLng(zip)) {
     return NextResponse.json({ error: "PLZ ungültig" }, { status: 400 });
   }
   const stores = await findStoresNear(await getDb(), zip, radius, variant);
-  return NextResponse.json({ stores, center: plzToLatLng(zip), radiusKm: radius });
+  return NextResponse.json(
+    { stores, center: plzToLatLng(zip), radiusKm: radius },
+    { headers: cache },
+  );
 }

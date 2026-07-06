@@ -1,5 +1,6 @@
 import { formatPrice, formatRelativeTime } from "@/lib/format";
 import type { VariantStatus } from "@/lib/queries";
+import { RelativeTime } from "./RelativeTime";
 
 const STATUS_META = {
   in_stock: {
@@ -36,8 +37,6 @@ export function StatusCard({
   now: number;
 }) {
   const meta = STATUS_META[offer.status];
-  const checked =
-    offer.lastCheckedAt === 0 ? "noch nicht geprüft" : `${formatRelativeTime(offer.lastCheckedAt, now)} geprüft`;
 
   return (
     <a
@@ -63,7 +62,17 @@ export function StatusCard({
           {offer.pickupNote && (
             <span className="text-sky-700 dark:text-sky-400">{offer.pickupNote} · </span>
           )}
-          {checked}
+          {offer.lastCheckedAt === 0 ? (
+            "noch nicht geprüft"
+          ) : (
+            <>
+              <RelativeTime
+                timestamp={offer.lastCheckedAt}
+                initial={formatRelativeTime(offer.lastCheckedAt, now)}
+              />{" "}
+              geprüft
+            </>
+          )}
         </p>
       </div>
       <div className="shrink-0 text-right">

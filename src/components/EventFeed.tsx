@@ -1,5 +1,6 @@
 import { formatPrice, formatRelativeTime } from "@/lib/format";
 import type { FeedEvent } from "@/lib/queries";
+import { RelativeTime } from "./RelativeTime";
 
 function line(event: FeedEvent): { icon: string; text: string } {
   const where = event.storeName ? ` (${event.storeName})` : "";
@@ -39,7 +40,10 @@ export function EventFeed({ events, now }: { events: FeedEvent[]; now: number })
             <span aria-hidden>{l.icon}</span>
             <span className="text-slate-800 dark:text-slate-200">{l.text}</span>
             <span className="ml-auto shrink-0 text-xs text-slate-400 dark:text-slate-500">
-              {formatRelativeTime(event.createdAt, now)}
+              <RelativeTime
+                timestamp={event.createdAt}
+                initial={formatRelativeTime(event.createdAt, now)}
+              />
             </span>
           </li>
         );

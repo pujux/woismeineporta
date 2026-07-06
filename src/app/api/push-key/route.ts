@@ -5,5 +5,9 @@ export async function GET() {
   if (!publicKey) {
     return NextResponse.json({ error: "push not configured" }, { status: 503 });
   }
-  return NextResponse.json({ publicKey });
+  // The VAPID public key is a stable deployment constant — cache hard.
+  return NextResponse.json(
+    { publicKey },
+    { headers: { "Cache-Control": "public, max-age=86400, stale-while-revalidate=604800" } },
+  );
 }
