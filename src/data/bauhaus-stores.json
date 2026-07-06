@@ -179,6 +179,8 @@
     "id": "750",
     "name": "Dornbirn",
     "zip": "6850",
-    "city": "Dornbirn"
+    "city": "Dornbirn",
+    "lat": 47.43001,
+    "lon": 9.74149
   }
 ]
