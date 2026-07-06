@@ -8,6 +8,9 @@ interface Fachcentrum {
   name: string;
   zip: string;
   city: string;
+  /** Exact store coordinates harvested from the Fachcentrum page. */
+  lat?: number;
+  lon?: number;
 }
 
 const STORES = bauhausStores as Fachcentrum[];
@@ -64,7 +67,10 @@ export async function fetchBauhausStoreStock(
 
   for (const product of PRODUCTS) {
     for (const fc of STORES) {
-      const geo = plzToLatLng(fc.zip);
+      // Exact store coordinates from the Fachcentrum page; ZIP centroid only as
+      // a fallback for the rare store that doesn't publish them.
+      const geo =
+        fc.lat != null && fc.lon != null ? { lat: fc.lat, lng: fc.lon } : plzToLatLng(fc.zip);
       if (!geo) continue;
       let res: Response;
       try {

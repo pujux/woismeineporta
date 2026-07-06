@@ -15,6 +15,7 @@ export function StoreFinder() {
   const [stores, setStores] = useState<NearbyStore[]>([]);
   const [focus, setFocus] = useState<MapFocus | null>(null);
   const [mode, setMode] = useState<"none" | "search" | "all">("none");
+  const [retailer, setRetailer] = useState<string | null>(null); // null = alle
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
@@ -32,6 +33,7 @@ export function StoreFinder() {
       const d = await res.json();
       setStores(d.stores);
       setFocus(d.center ? { center: d.center, radiusKm: d.radiusKm } : null);
+      setRetailer(null);
       setMode("search");
     } catch {
       setError("Suche fehlgeschlagen — bitte später nochmal probieren.");
@@ -47,13 +49,16 @@ export function StoreFinder() {
       const d = await fetch("/api/stores").then((r) => r.json());
       setStores(d.stores ?? []);
       setFocus(null);
+      setRetailer(null);
       setMode("all");
     } finally {
       setLoading(false);
     }
   }
 
-  const inStockCount = stores.filter((s) => s.inStock).length;
+  const retailerNames = [...new Set(stores.map((s) => s.retailerName))].sort();
+  const visible = retailer ? stores.filter((s) => s.retailerName === retailer) : stores;
+  const inStockCount = visible.filter((s) => s.inStock).length;
 
   return (
     <div>
@@ -106,26 +111,44 @@ export function StoreFinder() {
 
       {mode !== "none" && (
         <div className="mt-4">
-          <StoreMap stores={stores} focus={focus} />
+          {retailerNames.length > 1 && (
+            <div className="mb-3 flex flex-wrap gap-2">
+              {[null, ...retailerNames].map((r) => (
+                <button
+                  key={r ?? "all"}
+                  onClick={() => setRetailer(r)}
+                  className={`rounded-full px-3 py-1 text-xs font-medium transition ${
+                    retailer === r
+                      ? "bg-slate-900 text-white dark:bg-white dark:text-slate-900"
+                      : "bg-slate-100 text-slate-600 hover:bg-slate-200 dark:bg-slate-800 dark:text-slate-300 dark:hover:bg-slate-700"
+                  }`}
+                >
+                  {r ?? "Alle Händler"}
+                </button>
+              ))}
+            </div>
+          )}
+
+          <StoreMap stores={visible} focus={focus} />
           <p className="mt-2 text-xs text-slate-400 dark:text-slate-500">
-            {stores.length} Filialen
+            {visible.length} Filialen
             {inStockCount > 0 ? (
               <span className="font-medium text-green-700 dark:text-green-400"> — {inStockCount} davon lagernd 🟢</span>
             ) : (
               " — derzeit keine lagernd"
             )}
-            . Filialdaten von OBI; BAUHAUS &amp; MediaMarkt geben keine Filialdaten für Server frei.
+            . Filialdaten von OBI &amp; BAUHAUS; MediaMarkt gibt keine Filialdaten für Server frei.
           </p>
         </div>
       )}
 
       {mode === "search" && (
         <div className="mt-4">
-          {stores.length === 0 ? (
+          {visible.length === 0 ? (
             <p className="text-sm text-slate-500 dark:text-slate-400">Keine Filiale mit Verfügbarkeitsdaten im Umkreis gefunden. 😞</p>
           ) : (
             <ul className="divide-y divide-slate-100 overflow-hidden rounded-xl border border-slate-200 bg-white shadow-sm dark:divide-slate-800 dark:border-slate-800 dark:bg-slate-900">
-              {stores.map((s) => (
+              {visible.map((s) => (
                 <li
                   key={`${s.retailerName}-${s.zip}-${s.name}`}
                   className="flex items-center gap-3 px-4 py-2.5 text-sm"

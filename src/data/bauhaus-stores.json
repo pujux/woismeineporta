@@ -3,133 +3,177 @@
     "id": "757",
     "name": "Innsbruck-Völs",
     "zip": "6176",
-    "city": "Völs"
+    "city": "Völs",
+    "lat": 47.2603528,
+    "lon": 11.322402777
   },
   {
     "id": "758",
     "name": "Salzburg",
     "zip": "5020",
-    "city": "Salzburg"
+    "city": "Salzburg",
+    "lat": 47.809906,
+    "lon": 13.0604656
   },
   {
     "id": "761",
     "name": "Seiersberg",
     "zip": "8054",
-    "city": "Seiersberg"
+    "city": "Seiersberg",
+    "lat": 47.007349,
+    "lon": 15.4126901
   },
   {
     "id": "762",
     "name": "Steyr",
     "zip": "4400",
-    "city": "Steyr"
+    "city": "Steyr",
+    "lat": 48.0583533,
+    "lon": 14.4200982
   },
   {
     "id": "763",
     "name": "St. Pölten",
     "zip": "3100",
-    "city": "St. Pölten"
+    "city": "St. Pölten",
+    "lat": 48.18144609458179,
+    "lon": 15.6128435293071
   },
   {
     "id": "765",
     "name": "Wien-Ottakring",
     "zip": "1160",
-    "city": "Wien"
+    "city": "Wien",
+    "lat": 48.21921638977202,
+    "lon": 16.307728975005706
   },
   {
     "id": "774",
     "name": "Wels",
     "zip": "4600",
-    "city": "Wels"
+    "city": "Wels",
+    "lat": 48.1808947,
+    "lon": 14.0143427
   },
   {
     "id": "776",
     "name": "Wien Kagran",
     "zip": "1220",
-    "city": "Wien"
+    "city": "Wien",
+    "lat": 48.2541732,
+    "lon": 16.4472224
   },
   {
     "id": "780",
     "name": "Langenzersdorf",
     "zip": "2103",
-    "city": "Langenzersdorf"
+    "city": "Langenzersdorf",
+    "lat": 48.30146209999999,
+    "lon": 16.37164
   },
   {
     "id": "782",
     "name": "Wien Hütteldorf",
     "zip": "1140",
-    "city": "Wien"
+    "city": "Wien",
+    "lat": 48.2000426,
+    "lon": 16.2552334
   },
   {
     "id": "785",
     "name": "Wien Arsenalstraße",
     "zip": "1030",
-    "city": "Wien"
+    "city": "Wien",
+    "lat": 48.17745619999999,
+    "lon": 16.3938498
   },
   {
     "id": "787",
     "name": "Bregenz",
     "zip": "6900",
-    "city": "Bregenz"
+    "city": "Bregenz",
+    "lat": 47.500978,
+    "lon": 9.7371666
   },
   {
     "id": "788",
     "name": "Pasching",
     "zip": "4061",
-    "city": "Pasching"
+    "city": "Pasching",
+    "lat": 48.2454888888889,
+    "lon": 14.2382111111111
   },
   {
     "id": "790",
     "name": "Wiener Neudorf",
     "zip": "2351",
-    "city": "Wiener Neudorf"
+    "city": "Wiener Neudorf",
+    "lat": 48.0791038,
+    "lon": 16.3229192
   },
   {
     "id": "791",
     "name": "Wien Hirschstetten",
     "zip": "1220",
-    "city": "Wien"
+    "city": "Wien",
+    "lat": 48.2389735,
+    "lon": 16.4605802
   },
   {
     "id": "793",
     "name": "Bad Fischau-Brunn",
     "zip": "2721",
-    "city": "Bad Fischau-Brunn"
+    "city": "Bad Fischau-Brunn",
+    "lat": 47.8244482,
+    "lon": 16.2080108
   },
   {
     "id": "794",
     "name": "Wien Oberlaa",
     "zip": "1230",
-    "city": "Wien"
+    "city": "Wien",
+    "lat": 48.1486063,
+    "lon": 16.3605128
   },
   {
     "id": "795",
     "name": "Wien Brigittenau",
     "zip": "1200",
-    "city": "Wien"
+    "city": "Wien",
+    "lat": 48.2395238,
+    "lon": 16.3713875
   },
   {
     "id": "796",
     "name": "Klagenfurt",
     "zip": "9020",
-    "city": "Klagenfurt"
+    "city": "Klagenfurt",
+    "lat": 46.60732369999999,
+    "lon": 14.3268601
   },
   {
     "id": "797",
     "name": "Villach",
     "zip": "9500",
-    "city": "Villach"
+    "city": "Villach",
+    "lat": 46.5906847,
+    "lon": 13.8362734
   },
   {
     "id": "798",
     "name": "Linz",
     "zip": "4020",
-    "city": "Linz"
+    "city": "Linz",
+    "lat": 48.3045138,
+    "lon": 14.3174255
   },
   {
     "id": "799",
     "name": "Wals-Siezenheim",
     "zip": "5071",
-    "city": "Wals-Siezenheim"
+    "city": "Wals-Siezenheim",
+    "lat": 47.81405400000001,
+    "lon": 12.9991259
   },
   {
     "id": "750",
