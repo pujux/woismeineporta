@@ -4,9 +4,9 @@
 
 **Goal:** Availability tracker + instant-alert service for Midea PortaSplit / PortaSplit Cool across Austrian retailers, running as one Docker container on Dokploy.
 
-**Architecture:** Next.js 15 App Router monolith. SQLite (better-sqlite3 + Drizzle) on a Docker volume. In-process poller started from `instrumentation.ts` runs retailer adapters on a 30s/180s tier schedule, diffs against DB state, and fans out Web Push + Resend email on restock events. Server-rendered German UI with client-side 30s refresh.
+**Architecture:** Next.js 16 App Router monolith. SQLite (TypeORM + better-sqlite3 driver, EntitySchema definitions — no decorators) on a Docker volume. In-process poller started from `instrumentation.ts` runs retailer adapters on a 30s/180s tier schedule, diffs against DB state, and fans out Web Push + Resend email on restock events. Server-rendered German UI with client-side 30s refresh.
 
-**Tech Stack:** Node 22, pnpm, Next.js 15 (App Router, standalone output), TypeScript strict, Tailwind CSS v4, drizzle-orm + better-sqlite3, web-push, resend, vitest.
+**Tech Stack:** Node 22, pnpm, Next.js 16 (App Router, standalone output), TypeScript strict, Tailwind CSS v4, typeorm + better-sqlite3, web-push, resend, vitest.
 
 **Spec:** `docs/superpowers/specs/2026-07-06-woismeineporta-design.md`
 
@@ -16,7 +16,7 @@
 - All UI copy in **German**. Site name: **"Wo ist meine Porta?"**
 - Variant slugs are exactly `portasplit` and `portasplit-cool`; retailer slugs exactly `bauhaus`, `obi`, `hornbach`, `mediamarkt`, `tepto`.
 - Prices stored as **integer cents**; timestamps as **unix ms integers**.
-- SQLite file path from env `DATABASE_PATH` (default `./data/app.db`); tests use in-memory DB (`:memory:`).
+- SQLite file path from env `DATABASE_PATH` (default `./data/app.db`); tests use in-memory DB (`:memory:`). TypeORM uses `synchronize: true` (small additive schema, documented in README with backup note) — no migration files. All DB-touching functions are `async`.
 - Poller only starts when `ENABLE_POLLER=1`. Intervals: `POLL_FAST_MS` (default 30000), `POLL_SLOW_MS` (default 180000).
 - A failing adapter must never crash a tick; it yields status `unknown`.
 - Test runner: `pnpm vitest run` (config in `vitest.config.ts`). Every task commits when green.
@@ -44,8 +44,8 @@ Answer prompts: TypeScript yes, Tailwind yes, App Router yes, src dir yes, alias
 - [ ] **Step 2: Add deps**
 
 ```bash
-pnpm add drizzle-orm better-sqlite3 web-push resend
-pnpm add -D drizzle-kit vitest @types/better-sqlite3 @types/web-push
+pnpm add typeorm reflect-metadata better-sqlite3 web-push resend
+pnpm add -D vitest @types/better-sqlite3 @types/web-push tsx
 ```
 
 - [ ] **Step 3: Configure**
@@ -63,7 +63,7 @@ export default defineConfig({
 });
 ```
 
-`package.json` scripts: add `"test": "vitest run"`, `"db:generate": "drizzle-kit generate"`, `"db:migrate": "tsx src/db/migrate.ts"` (add `tsx` as dev dep).
+`package.json` scripts: add `"test": "vitest run"`.
 
 `.env.example` with every var from Global Constraints, with comments.
 
@@ -73,160 +73,237 @@ export default defineConfig({
 
 Run: `pnpm build && pnpm test` — both succeed.
 
-- [ ] **Step 5: Commit** `chore: scaffold next.js app with tailwind, drizzle, vitest`
+- [ ] **Step 5: Commit** `chore: scaffold next.js app with tailwind, typeorm, vitest`
 
 ---
 
-### Task 2: Database schema, client, migrations, seed
+### Task 2: Database entities, DataSource, seed (TypeORM)
 
 **Files:**
-- Create: `src/db/schema.ts`, `src/db/index.ts`, `src/db/seed.ts`, `src/db/migrate.ts`, `drizzle.config.ts`
+- Create: `src/db/entities.ts`, `src/db/index.ts`, `src/db/seed.ts`
 - Test: `src/db/__tests__/db.test.ts`
 
 **Interfaces:**
 - Produces:
-  - `createDb(path?: string): AppDb` in `src/db/index.ts` — opens SQLite (WAL mode), runs migrations idempotently, seeds `variants` + `retailers`. `AppDb = BetterSQLite3Database<typeof schema>` re-exported.
-  - `getDb(): AppDb` — lazy singleton using `process.env.DATABASE_PATH ?? './data/app.db'`.
-  - Tables (exact drizzle export names): `variants`, `retailers`, `offers`, `stores`, `storeAvailability`, `events`, `pushSubscriptions`, `emailSubscriptions`, `checkRuns`.
+  - `createDb(path?: string): Promise<AppDb>` in `src/db/index.ts` — initializes a TypeORM DataSource (`type: 'better-sqlite3'`, `synchronize: true`, WAL pragma for file DBs), seeds `variants` + `retailers`. `export type AppDb = DataSource`.
+  - `getDb(): Promise<AppDb>` — lazy singleton promise using `process.env.DATABASE_PATH ?? './data/app.db'`.
+  - Row interfaces + EntitySchema exports (exact names): `Variant`/`VariantEntity`, `Retailer`/`RetailerEntity`, `Offer`/`OfferEntity`, `Store`/`StoreEntity`, `StoreAvailability`/`StoreAvailabilityEntity`, `EventRow`/`EventEntity`, `PushSubscription`/`PushSubscriptionEntity`, `EmailSubscription`/`EmailSubscriptionEntity`, `CheckRun`/`CheckRunEntity`, `NotificationLogRow`/`NotificationLogEntity`.
 
-- [ ] **Step 1: Write schema** — `src/db/schema.ts`:
+- [ ] **Step 1: Write entities** — `src/db/entities.ts` (EntitySchema, no decorators — keeps Turbopack/Vitest config untouched):
 
 ```ts
-import { sqliteTable, text, integer, uniqueIndex } from 'drizzle-orm/sqlite-core';
+import { EntitySchema } from 'typeorm';
 
-export const variants = sqliteTable('variants', {
-  slug: text('slug').primaryKey(), // 'portasplit' | 'portasplit-cool'
-  name: text('name').notNull(),
-  uvpCents: integer('uvp_cents').notNull(),
+export type StockStatusDb = 'in_stock' | 'out_of_stock' | 'unknown';
+
+export interface Variant { slug: string; name: string; uvpCents: number; }
+export const VariantEntity = new EntitySchema<Variant>({
+  name: 'variant', tableName: 'variants',
+  columns: {
+    slug: { type: 'text', primary: true },
+    name: { type: 'text' },
+    uvpCents: { type: 'integer', name: 'uvp_cents' },
+  },
 });
 
-export const retailers = sqliteTable('retailers', {
-  slug: text('slug').primaryKey(),
-  name: text('name').notNull(),
-  homepage: text('homepage').notNull(),
+export interface Retailer { slug: string; name: string; homepage: string; }
+export const RetailerEntity = new EntitySchema<Retailer>({
+  name: 'retailer', tableName: 'retailers',
+  columns: {
+    slug: { type: 'text', primary: true },
+    name: { type: 'text' },
+    homepage: { type: 'text' },
+  },
 });
 
-export const offers = sqliteTable('offers', {
-  id: integer('id').primaryKey({ autoIncrement: true }),
-  retailerSlug: text('retailer_slug').notNull().references(() => retailers.slug),
-  variantSlug: text('variant_slug').notNull().references(() => variants.slug),
-  url: text('url').notNull(),
-  priceCents: integer('price_cents'),
-  status: text('status', { enum: ['in_stock', 'out_of_stock', 'unknown'] }).notNull().default('unknown'),
-  lastCheckedAt: integer('last_checked_at').notNull().default(0),
-  lastChangedAt: integer('last_changed_at').notNull().default(0),
-}, (t) => [uniqueIndex('offers_retailer_variant').on(t.retailerSlug, t.variantSlug)]);
-
-export const stores = sqliteTable('stores', {
-  id: integer('id').primaryKey({ autoIncrement: true }),
-  retailerSlug: text('retailer_slug').notNull().references(() => retailers.slug),
-  externalId: text('external_id').notNull(),
-  name: text('name').notNull(),
-  zip: text('zip').notNull(),
-  city: text('city').notNull(),
-  lat: integer('lat_e6').notNull(),  // latitude * 1e6
-  lng: integer('lng_e6').notNull(),
-}, (t) => [uniqueIndex('stores_retailer_external').on(t.retailerSlug, t.externalId)]);
-
-export const storeAvailability = sqliteTable('store_availability', {
-  id: integer('id').primaryKey({ autoIncrement: true }),
-  storeId: integer('store_id').notNull().references(() => stores.id),
-  variantSlug: text('variant_slug').notNull().references(() => variants.slug),
-  inStock: integer('in_stock', { mode: 'boolean' }).notNull(),
-  lastCheckedAt: integer('last_checked_at').notNull().default(0),
-  lastChangedAt: integer('last_changed_at').notNull().default(0),
-}, (t) => [uniqueIndex('sa_store_variant').on(t.storeId, t.variantSlug)]);
-
-export const events = sqliteTable('events', {
-  id: integer('id').primaryKey({ autoIncrement: true }),
-  type: text('type', { enum: ['online_restock', 'online_soldout', 'price_change', 'store_restock', 'store_soldout'] }).notNull(),
-  retailerSlug: text('retailer_slug').notNull(),
-  variantSlug: text('variant_slug').notNull(),
-  storeId: integer('store_id'),
-  priceCents: integer('price_cents'),
-  createdAt: integer('created_at').notNull(),
+export interface Offer {
+  id: number; retailerSlug: string; variantSlug: string; url: string;
+  priceCents: number | null; status: StockStatusDb;
+  lastCheckedAt: number; lastChangedAt: number;
+}
+export const OfferEntity = new EntitySchema<Offer>({
+  name: 'offer', tableName: 'offers',
+  columns: {
+    id: { type: 'integer', primary: true, generated: true },
+    retailerSlug: { type: 'text', name: 'retailer_slug' },
+    variantSlug: { type: 'text', name: 'variant_slug' },
+    url: { type: 'text' },
+    priceCents: { type: 'integer', name: 'price_cents', nullable: true },
+    status: { type: 'text', default: 'unknown' },
+    lastCheckedAt: { type: 'integer', name: 'last_checked_at', default: 0 },
+    lastChangedAt: { type: 'integer', name: 'last_changed_at', default: 0 },
+  },
+  indices: [{ name: 'offers_retailer_variant', columns: ['retailerSlug', 'variantSlug'], unique: true }],
 });
 
-export const pushSubscriptions = sqliteTable('push_subscriptions', {
-  id: integer('id').primaryKey({ autoIncrement: true }),
-  endpoint: text('endpoint').notNull().unique(),
-  p256dh: text('p256dh').notNull(),
-  auth: text('auth').notNull(),
-  variantSlugs: text('variant_slugs').notNull(), // JSON array string
-  zip: text('zip'),
-  radiusKm: integer('radius_km'),
-  createdAt: integer('created_at').notNull(),
+export interface Store {
+  id: number; retailerSlug: string; externalId: string; name: string;
+  zip: string; city: string; latE6: number; lngE6: number; // degrees * 1e6
+}
+export const StoreEntity = new EntitySchema<Store>({
+  name: 'store', tableName: 'stores',
+  columns: {
+    id: { type: 'integer', primary: true, generated: true },
+    retailerSlug: { type: 'text', name: 'retailer_slug' },
+    externalId: { type: 'text', name: 'external_id' },
+    name: { type: 'text' },
+    zip: { type: 'text' },
+    city: { type: 'text' },
+    latE6: { type: 'integer', name: 'lat_e6' },
+    lngE6: { type: 'integer', name: 'lng_e6' },
+  },
+  indices: [{ name: 'stores_retailer_external', columns: ['retailerSlug', 'externalId'], unique: true }],
 });
 
-export const emailSubscriptions = sqliteTable('email_subscriptions', {
-  id: integer('id').primaryKey({ autoIncrement: true }),
-  email: text('email').notNull().unique(),
-  confirmToken: text('confirm_token').notNull(),
-  unsubscribeToken: text('unsubscribe_token').notNull(),
-  confirmed: integer('confirmed', { mode: 'boolean' }).notNull().default(false),
-  variantSlugs: text('variant_slugs').notNull(),
-  zip: text('zip'),
-  radiusKm: integer('radius_km'),
-  createdAt: integer('created_at').notNull(),
+export interface StoreAvailability {
+  id: number; storeId: number; variantSlug: string; inStock: boolean;
+  lastCheckedAt: number; lastChangedAt: number;
+}
+export const StoreAvailabilityEntity = new EntitySchema<StoreAvailability>({
+  name: 'store_availability', tableName: 'store_availability',
+  columns: {
+    id: { type: 'integer', primary: true, generated: true },
+    storeId: { type: 'integer', name: 'store_id' },
+    variantSlug: { type: 'text', name: 'variant_slug' },
+    inStock: { type: 'boolean', name: 'in_stock' },
+    lastCheckedAt: { type: 'integer', name: 'last_checked_at', default: 0 },
+    lastChangedAt: { type: 'integer', name: 'last_changed_at', default: 0 },
+  },
+  indices: [{ name: 'sa_store_variant', columns: ['storeId', 'variantSlug'], unique: true }],
 });
 
-export const checkRuns = sqliteTable('check_runs', {
-  id: integer('id').primaryKey({ autoIncrement: true }),
-  startedAt: integer('started_at').notNull(),
-  durationMs: integer('duration_ms').notNull(),
-  summary: text('summary').notNull(), // JSON: per-adapter outcome
+export type EventTypeDb = 'online_restock' | 'online_soldout' | 'price_change' | 'store_restock' | 'store_soldout';
+export interface EventRow {
+  id: number; type: EventTypeDb; retailerSlug: string; variantSlug: string;
+  storeId: number | null; priceCents: number | null; createdAt: number;
+}
+export const EventEntity = new EntitySchema<EventRow>({
+  name: 'event', tableName: 'events',
+  columns: {
+    id: { type: 'integer', primary: true, generated: true },
+    type: { type: 'text' },
+    retailerSlug: { type: 'text', name: 'retailer_slug' },
+    variantSlug: { type: 'text', name: 'variant_slug' },
+    storeId: { type: 'integer', name: 'store_id', nullable: true },
+    priceCents: { type: 'integer', name: 'price_cents', nullable: true },
+    createdAt: { type: 'integer', name: 'created_at' },
+  },
+  indices: [{ name: 'events_created', columns: ['createdAt'] }],
 });
 
-export const notificationLog = sqliteTable('notification_log', {
-  id: integer('id').primaryKey({ autoIncrement: true }),
-  channel: text('channel', { enum: ['push', 'email'] }).notNull(),
-  subscriptionId: integer('subscription_id').notNull(),
-  dedupeKey: text('dedupe_key').notNull(), // e.g. 'online:bauhaus:portasplit' or 'store:obi:123:portasplit'
-  sentAt: integer('sent_at').notNull(),
+export interface PushSubscription {
+  id: number; endpoint: string; p256dh: string; auth: string;
+  variantSlugs: string; // JSON array string
+  zip: string | null; radiusKm: number | null; createdAt: number;
+}
+export const PushSubscriptionEntity = new EntitySchema<PushSubscription>({
+  name: 'push_subscription', tableName: 'push_subscriptions',
+  columns: {
+    id: { type: 'integer', primary: true, generated: true },
+    endpoint: { type: 'text', unique: true },
+    p256dh: { type: 'text' },
+    auth: { type: 'text' },
+    variantSlugs: { type: 'text', name: 'variant_slugs' },
+    zip: { type: 'text', nullable: true },
+    radiusKm: { type: 'integer', name: 'radius_km', nullable: true },
+    createdAt: { type: 'integer', name: 'created_at' },
+  },
 });
+
+export interface EmailSubscription {
+  id: number; email: string; confirmToken: string; unsubscribeToken: string;
+  confirmed: boolean; variantSlugs: string; zip: string | null;
+  radiusKm: number | null; createdAt: number;
+}
+export const EmailSubscriptionEntity = new EntitySchema<EmailSubscription>({
+  name: 'email_subscription', tableName: 'email_subscriptions',
+  columns: {
+    id: { type: 'integer', primary: true, generated: true },
+    email: { type: 'text', unique: true },
+    confirmToken: { type: 'text', name: 'confirm_token' },
+    unsubscribeToken: { type: 'text', name: 'unsubscribe_token' },
+    confirmed: { type: 'boolean', default: false },
+    variantSlugs: { type: 'text', name: 'variant_slugs' },
+    zip: { type: 'text', nullable: true },
+    radiusKm: { type: 'integer', name: 'radius_km', nullable: true },
+    createdAt: { type: 'integer', name: 'created_at' },
+  },
+});
+
+export interface CheckRun { id: number; startedAt: number; durationMs: number; summary: string; }
+export const CheckRunEntity = new EntitySchema<CheckRun>({
+  name: 'check_run', tableName: 'check_runs',
+  columns: {
+    id: { type: 'integer', primary: true, generated: true },
+    startedAt: { type: 'integer', name: 'started_at' },
+    durationMs: { type: 'integer', name: 'duration_ms' },
+    summary: { type: 'text' },
+  },
+});
+
+export interface NotificationLogRow {
+  id: number; channel: 'push' | 'email'; subscriptionId: number;
+  dedupeKey: string; sentAt: number; // dedupeKey: 'online:{retailer}:{variant}' | 'store:{retailer}:{externalId}:{variant}'
+}
+export const NotificationLogEntity = new EntitySchema<NotificationLogRow>({
+  name: 'notification_log', tableName: 'notification_log',
+  columns: {
+    id: { type: 'integer', primary: true, generated: true },
+    channel: { type: 'text' },
+    subscriptionId: { type: 'integer', name: 'subscription_id' },
+    dedupeKey: { type: 'text', name: 'dedupe_key' },
+    sentAt: { type: 'integer', name: 'sent_at' },
+  },
+  indices: [{ name: 'nl_dedupe', columns: ['channel', 'subscriptionId', 'dedupeKey', 'sentAt'] }],
+});
+
+export const allEntities = [
+  VariantEntity, RetailerEntity, OfferEntity, StoreEntity, StoreAvailabilityEntity,
+  EventEntity, PushSubscriptionEntity, EmailSubscriptionEntity, CheckRunEntity, NotificationLogEntity,
+];
 ```
 
-(Also export `notificationLog` in the Produces list — used by Task 10.)
-
-- [ ] **Step 2: Client + migrate + seed** — `src/db/index.ts`:
+- [ ] **Step 2: DataSource + seed** — `src/db/index.ts`:
 
 ```ts
-import Database from 'better-sqlite3';
-import { drizzle, BetterSQLite3Database } from 'drizzle-orm/better-sqlite3';
-import { migrate } from 'drizzle-orm/better-sqlite3/migrator';
-import * as schema from './schema';
+import 'reflect-metadata';
+import { DataSource } from 'typeorm';
+import { allEntities } from './entities';
 import { seed } from './seed';
 import path from 'node:path';
 import fs from 'node:fs';
 
-export type AppDb = BetterSQLite3Database<typeof schema>;
+export type AppDb = DataSource;
+export * from './entities';
 
-export function createDb(dbPath = process.env.DATABASE_PATH ?? './data/app.db'): AppDb {
+export async function createDb(dbPath = process.env.DATABASE_PATH ?? './data/app.db'): Promise<AppDb> {
   if (dbPath !== ':memory:') fs.mkdirSync(path.dirname(dbPath), { recursive: true });
-  const sqlite = new Database(dbPath);
-  sqlite.pragma('journal_mode = WAL');
-  const db = drizzle(sqlite, { schema });
-  migrate(db, { migrationsFolder: path.join(process.cwd(), 'drizzle') });
-  seed(db);
-  return db;
+  const ds = new DataSource({
+    type: 'better-sqlite3',
+    database: dbPath,
+    entities: allEntities,
+    synchronize: true,
+  });
+  await ds.initialize();
+  if (dbPath !== ':memory:') await ds.query('PRAGMA journal_mode = WAL');
+  await seed(ds);
+  return ds;
 }
 
-let singleton: AppDb | undefined;
-export function getDb(): AppDb {
+let singleton: Promise<AppDb> | undefined;
+export function getDb(): Promise<AppDb> {
   if (!singleton) singleton = createDb();
   return singleton;
 }
 ```
 
-`src/db/seed.ts`: idempotent `INSERT OR IGNORE` (drizzle `.onConflictDoNothing()`) of the 2 variants (`portasplit` "Midea PortaSplit" 119900; `portasplit-cool` "Midea PortaSplit Cool" 89900) and 5 retailers (bauhaus/BAUHAUS/https://www.bauhaus.at, obi/OBI/https://www.obi.at, hornbach/HORNBACH/https://www.hornbach.at, mediamarkt/MediaMarkt/https://www.mediamarkt.at, tepto/Tepto/https://www.tepto.at).
+`src/db/seed.ts`: `export async function seed(db: AppDb)` — `repo.upsert(rows, ['slug'])` for the 2 variants (`portasplit` "Midea PortaSplit" 119900; `portasplit-cool` "Midea PortaSplit Cool" 89900) and 5 retailers (bauhaus/BAUHAUS/https://www.bauhaus.at, obi/OBI/https://www.obi.at, hornbach/HORNBACH/https://www.hornbach.at, mediamarkt/MediaMarkt/https://www.mediamarkt.at, tepto/Tepto/https://www.tepto.at).
 
-`drizzle.config.ts` pointing schema→`src/db/schema.ts`, out→`drizzle`. Run `pnpm db:generate` to create the migration.
-
-- [ ] **Step 3: Write failing test** — `src/db/__tests__/db.test.ts`: `createDb(':memory:')` → expect `db.select().from(variants)` returns 2 rows, retailers 5 rows; calling `seed` twice doesn't duplicate.
+- [ ] **Step 3: Write failing test** — `src/db/__tests__/db.test.ts`: `await createDb(':memory:')` → variants repo count 2, retailers 5; `seed` twice → still 2/5; insert+read an Offer row roundtrips.
 
 - [ ] **Step 4: Run** `pnpm test` → PASS. Fix until green.
 
-- [ ] **Step 5: Commit** `feat: sqlite schema, migrations, seed`
+- [ ] **Step 5: Commit** `feat: typeorm entities, datasource, seed`
 
 ---
 
@@ -358,10 +435,10 @@ export interface StockEvent {
 }
 export function computeDiff(prev: PrevState, result: RetailerResult): StockEvent[];
 
-// src/lib/state.ts  (DB glue)
-export function loadPrevState(db: AppDb, retailerSlug: string): PrevState;
-export function persistResult(db: AppDb, result: RetailerResult, evts: StockEvent[], now: number): void; // upserts offers/stores/storeAvailability (sets lastCheckedAt=now, lastChangedAt on change), inserts events rows (resolving storeExternalId→storeId)
-export function markUnknown(db: AppDb, retailerSlug: string, now: number): StockEvent[]; // sets all offers of retailer to 'unknown' (no events emitted, returns [])
+// src/lib/state.ts  (DB glue — all async, AppDb = TypeORM DataSource)
+export function loadPrevState(db: AppDb, retailerSlug: string): Promise<PrevState>;
+export function persistResult(db: AppDb, result: RetailerResult, evts: StockEvent[], now: number): Promise<void>; // upserts offers/stores/storeAvailability (sets lastCheckedAt=now, lastChangedAt on change), inserts events rows (resolving storeExternalId→storeId)
+export function markUnknown(db: AppDb, retailerSlug: string, now: number): Promise<void>; // sets all offers of retailer to 'unknown'
 ```
 
 - [ ] **Step 1: Failing tests for `computeDiff`** — table-driven cases:
@@ -517,9 +594,9 @@ Behavior (test via `runTick` with fake adapters/clock — never real HTTP):
 ```ts
 // src/lib/queries.ts
 export interface VariantStatus { variant: { slug: VariantSlug; name: string; uvpCents: number }; offers: Array<{ retailerSlug: string; retailerName: string; url: string; priceCents: number | null; status: StockStatus; lastCheckedAt: number; lastChangedAt: number }>; }
-export function getVariantStatuses(db: AppDb): VariantStatus[];
-export function getRecentEvents(db: AppDb, limit?: number): Array<{ type: string; retailerName: string; variantName: string; storeName: string | null; priceCents: number | null; createdAt: number }>;
-export function findStoresNear(db: AppDb, zip: string, radiusKm: number, variant?: VariantSlug): Array<{ retailerName: string; name: string; zip: string; city: string; distanceKm: number; inStock: boolean; lastCheckedAt: number }>; // sorted by distance, in-stock first
+export function getVariantStatuses(db: AppDb): Promise<VariantStatus[]>;
+export function getRecentEvents(db: AppDb, limit?: number): Promise<Array<{ type: string; retailerName: string; variantName: string; storeName: string | null; priceCents: number | null; createdAt: number }>>;
+export function findStoresNear(db: AppDb, zip: string, radiusKm: number, variant?: VariantSlug): Promise<Array<{ retailerName: string; name: string; zip: string; city: string; distanceKm: number; inStock: boolean; lastCheckedAt: number }>>; // sorted by distance, in-stock first
 // src/lib/format.ts
 export function formatPrice(cents: number | null): string;        // 119900 → "1.199,00 €", null → "–"
 export function formatRelativeTime(ts: number, now: number): string; // "vor 2 Min", "vor 3 Std", "gerade eben"
@@ -565,7 +642,7 @@ Page layout (server component, `export const revalidate = 30` not usable with dy
 **Interfaces:** none downstream.
 
 - [ ] **Step 1:** Impressum: placeholder block with TODO-comment for Julian (name/address per §5 ECG). Datenschutz: real draft in German covering: push subscription data (endpoint/keys, purpose, deletion), email double-opt-in data, no cookies/tracking, GeoNames attribution, Resend as processor, hosting on own server.
-- [ ] **Step 2:** `Dockerfile` (multi-stage): `node:22-alpine` deps→build (`pnpm build`, needs `corepack enable`)→runtime copying `.next/standalone`, `.next/static`, `public`, `drizzle/`; `ENV DATABASE_PATH=/data/app.db ENABLE_POLLER=1 PORT=3000`; `VOLUME /data`; non-root user; `CMD ["node", "server.js"]`. Note: better-sqlite3 native build needs `apk add python3 make g++` in deps stage only.
+- [ ] **Step 2:** `Dockerfile` (multi-stage): `node:22-alpine` deps→build (`pnpm build`, needs `corepack enable`)→runtime copying `.next/standalone`, `.next/static`, `public`; `ENV DATABASE_PATH=/data/app.db ENABLE_POLLER=1 PORT=3000`; `VOLUME /data`; non-root user; `CMD ["node", "server.js"]`. Note: better-sqlite3 native build needs `apk add python3 make g++` in deps stage only.
 - [ ] **Step 3:** Verify locally: `docker build -t woismeineporta . && docker run -p 3000:3000 -v $(pwd)/data:/data --env-file .env woismeineporta` → page loads, poller logs ticks.
 - [ ] **Step 4:** README: what it is, dev setup (`pnpm i`, `.env`, `pnpm dev`), generating VAPID keys (`npx web-push generate-vapid-keys`), test commands, Dokploy deployment walkthrough (app from Git repo → Dockerfile build, volume `/data`, 1 replica, domain + HTTPS via Traefik, env vars list), Resend setup (domain verify, `RESEND_API_KEY`), GeoNames CC-BY attribution.
 - [ ] **Step 5:** Full check: `pnpm test && pnpm build` green. **Step 6: Commit** `feat: legal pages, dockerfile, deployment docs`

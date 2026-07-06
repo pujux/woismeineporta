@@ -13,7 +13,7 @@ Not a shop. No checkout, no accounts. Language: German (Austrian market).
 
 ## Architecture
 
-One Next.js (App Router, TypeScript, Tailwind) monolith running as a **single Docker container on Dokploy** (Next.js standalone output, 1 replica). Persistent data in **SQLite** (better-sqlite3 + Drizzle ORM) on a Docker volume (`/data/app.db`) — no separate DB service, backups are one file. The scheduler is **in-process**: `instrumentation.ts` starts a poll loop on server boot (guarded by `ENABLE_POLLER=1` so dev/build don't poll). Fast-tier adapters run every 30s, slow-tier every 180s (both env-configurable). Notifications fan out inside the same tick that detects a stock flip — worst-case latency ≈ poll interval + seconds.
+One Next.js (App Router, TypeScript, Tailwind) monolith running as a **single Docker container on Dokploy** (Next.js standalone output, 1 replica). Persistent data in **SQLite** (better-sqlite3 driver + TypeORM, EntitySchema definitions) on a Docker volume (`/data/app.db`) — no separate DB service, backups are one file. The scheduler is **in-process**: `instrumentation.ts` starts a poll loop on server boot (guarded by `ENABLE_POLLER=1` so dev/build don't poll). Fast-tier adapters run every 30s, slow-tier every 180s (both env-configurable). Notifications fan out inside the same tick that detects a stock flip — worst-case latency ≈ poll interval + seconds.
 
 ```
 in-process poller (setInterval, 30s fast / 180s slow, overlap-guarded)
@@ -45,7 +45,7 @@ Browser ──> Next.js pages (server-rendered from SQLite, 30s revalidate)
 
 Amazon is explicitly out of scope for v1 (hardest bot protection, low signal). Exact endpoint URLs/shapes are discovered during implementation by inspecting each site's network traffic (agent-browser); the spec commits to the adapter interface, not to endpoints. If a retailer blocks datacenter IPs, its adapter degrades to `unknown` and the site stays honest about staleness (shows "zuletzt geprüft" timestamps).
 
-## Data model (SQLite, Drizzle)
+## Data model (SQLite, TypeORM)
 
 - `variants` — seeded: `portasplit`, `portasplit-cool` (slug, name, uvp).
 - `retailers` — seeded: slug, name, homepage.
