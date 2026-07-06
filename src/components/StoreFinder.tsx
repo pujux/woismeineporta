@@ -42,6 +42,44 @@ export function StoreFinder() {
     }
   }
 
+  function searchNearMe() {
+    if (!("geolocation" in navigator)) {
+      setError("Dein Browser unterstützt keine Standortbestimmung.");
+      return;
+    }
+    setLoading(true);
+    setError(null);
+    navigator.geolocation.getCurrentPosition(
+      async (pos) => {
+        try {
+          const { latitude, longitude } = pos.coords;
+          const res = await fetch(`/api/stores?lat=${latitude}&lng=${longitude}&radius=${radius}`);
+          if (!res.ok) {
+            setError("Für deinen Standort haben wir keine Filialdaten (nur Österreich).");
+            return;
+          }
+          const d = await res.json();
+          setStores(d.stores);
+          setFocus(d.center ? { center: d.center, radiusKm: d.radiusKm } : null);
+          setZip("");
+          setRetailer(null);
+          setMode("search");
+        } finally {
+          setLoading(false);
+        }
+      },
+      (err) => {
+        setLoading(false);
+        setError(
+          err.code === err.PERMISSION_DENIED
+            ? "Standortzugriff wurde verweigert — gib stattdessen eine PLZ ein."
+            : "Standort konnte nicht bestimmt werden — bitte PLZ eingeben.",
+        );
+      },
+      { enableHighAccuracy: false, timeout: 10_000, maximumAge: 300_000 },
+    );
+  }
+
   async function showAll() {
     setLoading(true);
     setError(null);
@@ -91,6 +129,19 @@ export function StoreFinder() {
           className="rounded-lg bg-sky-600 px-4 py-2 text-sm font-semibold text-white shadow-sm transition hover:bg-sky-500 disabled:opacity-50"
         >
           {loading ? "Suche…" : "Filialen suchen"}
+        </button>
+        <button
+          type="button"
+          onClick={searchNearMe}
+          disabled={loading}
+          title="Filialen in meiner Nähe"
+          className="inline-flex items-center gap-1.5 rounded-lg border border-slate-300 px-3 py-2 text-sm font-medium text-slate-600 transition hover:bg-slate-100 disabled:opacity-50 dark:border-slate-700 dark:text-slate-300 dark:hover:bg-slate-800"
+        >
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" className="h-4 w-4" aria-hidden>
+            <path d="M12 21s-6-5.686-6-10a6 6 0 1 1 12 0c0 4.314-6 10-6 10Z" strokeLinejoin="round" />
+            <circle cx="12" cy="11" r="2" />
+          </svg>
+          In meiner Nähe
         </button>
         {mode !== "all" && (
           <button

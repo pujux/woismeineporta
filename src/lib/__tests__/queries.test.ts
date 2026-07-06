@@ -89,6 +89,15 @@ describe("queries", () => {
     expect(all[1].inStock).toBe(false);
   });
 
+  it("findStoresNearPoint searches from arbitrary coordinates", async () => {
+    const { findStoresNearPoint } = await import("@/lib/queries");
+    // a point next to the Vienna store (1100)
+    const near = await findStoresNearPoint(db, { lat: 48.18, lng: 16.36 }, 50);
+    expect(near.length).toBe(1);
+    expect(near[0].name).toBe("Wien 10");
+    expect(near[0].distanceKm).toBeLessThan(5);
+  });
+
   it("findStoresNear can filter by variant", async () => {
     const near = await findStoresNear(db, "1010", 300, "portasplit-cool");
     expect(near).toEqual([]);

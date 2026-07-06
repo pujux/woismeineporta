@@ -125,7 +125,16 @@ export async function listAllStores(db: AppDb, variant?: VariantSlug): Promise<N
 export async function findStoresNear(db: AppDb, zip: string, radiusKm: number, variant?: VariantSlug): Promise<NearbyStore[]> {
   const home = plzToLatLng(zip);
   if (!home) return [];
+  return findStoresNearPoint(db, home, radiusKm, variant);
+}
 
+/** Same as findStoresNear but from an arbitrary point (e.g. device geolocation). */
+export async function findStoresNearPoint(
+  db: AppDb,
+  home: { lat: number; lng: number },
+  radiusKm: number,
+  variant?: VariantSlug,
+): Promise<NearbyStore[]> {
   const stores = await db.getRepository(StoreEntity).find();
   const retailers = new Map((await db.getRepository(RetailerEntity).find()).map((r) => [r.slug, r.name]));
   const availability = await db.getRepository(StoreAvailabilityEntity).find();
