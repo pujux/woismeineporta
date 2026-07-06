@@ -1,6 +1,6 @@
 import plzData from "@/data/plz-at.json";
 
-const PLZ = plzData as Record<string, [number, number]>;
+const PLZ = plzData as unknown as Record<string, [number, number]>;
 
 export function plzToLatLng(zip: string): { lat: number; lng: number } | null {
   const entry = PLZ[zip];
