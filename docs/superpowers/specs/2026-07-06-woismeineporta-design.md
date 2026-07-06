@@ -7,23 +7,22 @@
 
 A bestell.bar-style availability tracker for the Austrian market, for exactly one product family: the **Midea PortaSplit** (12.000 BTU, cools + heats, UVP €1.199) and the **Midea PortaSplit Cool** (8.000 BTU, cooling only, ~€300 cheaper). Both regularly sell out in summer. The site shows, per Austrian retailer, whether the product is orderable online and in which physical stores (Filialen) it is in stock, and notifies subscribers the moment it flips to available.
 
-**Primary success criterion: lowest possible alert latency at €0/month hosting cost.** Worst-case target: ~90 seconds from a retailer flipping to "in stock" until the push notification arrives.
+**Primary success criterion: lowest possible alert latency at ~€0 marginal hosting cost.** Runs as one self-contained project on Julian's existing Dokploy instance. Worst-case target: ~45 seconds from a retailer flipping to "in stock" until the push notification arrives.
 
 Not a shop. No checkout, no accounts. Language: German (Austrian market).
 
 ## Architecture
 
-One Next.js (App Router, TypeScript, Tailwind) monolith deployed on **Vercel Hobby**. Persistent data in **Neon Postgres** (free tier) via **Drizzle ORM**. A tiny **Cloudflare Worker with a 1-minute cron trigger** is the scheduler: it does nothing but `fetch()` the app's secured check endpoint every minute (Vercel Hobby cron only fires daily; CF cron is the most reliable free 1-minute scheduler). Notifications fan out inside the same invocation that detects a stock flip.
+One Next.js (App Router, TypeScript, Tailwind) monolith running as a **single Docker container on Dokploy** (Next.js standalone output, 1 replica). Persistent data in **SQLite** (better-sqlite3 + Drizzle ORM) on a Docker volume (`/data/app.db`) — no separate DB service, backups are one file. The scheduler is **in-process**: `instrumentation.ts` starts a poll loop on server boot (guarded by `ENABLE_POLLER=1` so dev/build don't poll). Fast-tier adapters run every 30s, slow-tier every 180s (both env-configurable). Notifications fan out inside the same tick that detects a stock flip — worst-case latency ≈ poll interval + seconds.
 
 ```
-CF Worker (cron: * * * * *)
-    └─> POST /api/cron/check  (Bearer CRON_SECRET)
-            ├─ run due retailer adapters (tiered: 1-min JSON APIs, 3–5-min HTML scrapes)
-            ├─ normalize → diff against DB state
-            ├─ write offers / store_availability / events
-            └─ on out_of_stock → in_stock transitions: fan out Web Push + email
+in-process poller (setInterval, 30s fast / 180s slow, overlap-guarded)
+    ├─ run due retailer adapters
+    ├─ normalize → diff against SQLite state
+    ├─ write offers / store_availability / events
+    └─ on out_of_stock → in_stock transitions: fan out Web Push + email
 
-Browser ──> Next.js pages (server-rendered from DB, 60s revalidate)
+Browser ──> Next.js pages (server-rendered from SQLite, 30s revalidate)
         ──> /api/subscribe/* (push + email subscription management)
 ```
 
@@ -38,15 +37,15 @@ Browser ──> Next.js pages (server-rendered from DB, 60s revalidate)
 
 | Retailer | Online status | Store-level | Method | Tier |
 |---|---|---|---|---|
-| Bauhaus.at | ✓ | ✓ | public store-availability JSON endpoint | 1 min |
-| Obi.at | ✓ | ✓ | public availability JSON endpoint | 1 min |
-| Hornbach.at | ✓ | ✓ | public article-availability JSON endpoint | 1 min |
-| MediaMarkt.at | ✓ | ✓ | GraphQL API (Akamai-protected — best effort) | 3–5 min |
-| Tepto.at | ✓ | — | HTML scrape of product page | 3–5 min |
+| Bauhaus.at | ✓ | ✓ | public store-availability JSON endpoint | fast (30s) |
+| Obi.at | ✓ | ✓ | public availability JSON endpoint | fast (30s) |
+| Hornbach.at | ✓ | ✓ | public article-availability JSON endpoint | fast (30s) |
+| MediaMarkt.at | ✓ | ✓ | GraphQL API (Akamai-protected — best effort) | slow (180s) |
+| Tepto.at | ✓ | — | HTML scrape of product page | slow (180s) |
 
 Amazon is explicitly out of scope for v1 (hardest bot protection, low signal). Exact endpoint URLs/shapes are discovered during implementation by inspecting each site's network traffic (agent-browser); the spec commits to the adapter interface, not to endpoints. If a retailer blocks datacenter IPs, its adapter degrades to `unknown` and the site stays honest about staleness (shows "zuletzt geprüft" timestamps).
 
-## Data model (Postgres, Drizzle)
+## Data model (SQLite, Drizzle)
 
 - `variants` — seeded: `portasplit`, `portasplit-cool` (slug, name, uvp).
 - `retailers` — seeded: slug, name, homepage.
@@ -64,15 +63,15 @@ PLZ→lat/lng resolution for subscriber radius matching uses a bundled Austrian 
 
 - `/` — hero, both variants side by side: per-retailer status cards (Bestellbar/Ausverkauft/Unbekannt, price, deep link, "zuletzt geprüft"), subscribe CTA, Filial-availability block (PLZ input → nearby stores with stock across chains), recent-changes feed.
 - `/impressum`, `/datenschutz` — Austrian legal requirements (ECG/DSGVO), content placeholders for Julian to fill.
-- `POST /api/cron/check` — Bearer-secured; runs due adapters, diffs, notifies. Responds with run summary.
+- `POST /api/admin/check` — Bearer-secured (`ADMIN_SECRET`) manual trigger for debugging; runs one poll tick and responds with the run summary. The regular schedule is the in-process poller, not this route.
 - `POST /api/subscribe/push` / `DELETE` — store/remove push subscription with preferences.
 - `POST /api/subscribe/email` → sends double-opt-in mail; `GET /api/subscribe/email/confirm?token=` ; `GET /api/subscribe/email/unsubscribe?token=`.
 - `GET /api/stores?zip=&radius=&variant=` — powers the PLZ lookup client-side.
-- Main page renders server-side from DB with 60s revalidation; the status data is also polled client-side every 60s for a live feel.
+- Main page renders server-side from DB with 30s revalidation; the status data is also polled client-side every 30s for a live feel.
 
-## Cron & tiering
+## Poller & tiering
 
-The CF Worker fires every minute. The check endpoint decides internally which adapters are due (fast tier every run; slow tier when `minute % 3 == 0`), staggers requests, and uses conditional/If-Modified headers where supported. Total work per run: ≈5–15 HTTP requests, well under Vercel Hobby's function limits (~43k invocations/month, within free quota). `CRON_SECRET` shared between Worker and app.
+`instrumentation.ts` (Node runtime only, `ENABLE_POLLER=1`) starts one loop per container. Each tick runs the adapters whose tier interval has elapsed (`POLL_FAST_MS` default 30000, `POLL_SLOW_MS` default 180000), staggers requests, and uses conditional/If-Modified headers where supported. A tick that is still running skips the next trigger (overlap guard flag). Politeness: ~2 requests/min/retailer on the fast tier — comparable to a human refreshing a page; back-off doubling on repeated HTTP 403/429 per adapter.
 
 ## Notifications
 
@@ -84,7 +83,7 @@ The CF Worker fires every minute. The check endpoint decides internally which ad
 
 - Adapter failure (network, blocked, markup change) → offer status `unknown`, event logged, run continues. Repeated failure (>30 min) surfaces on the page as "Status unbekannt seit …".
 - Push endpoint gone (410) → subscription deleted. Resend failure → logged, no retry loop.
-- Cron endpoint is idempotent; overlapping runs guarded by a short DB advisory lock.
+- Poll ticks are idempotent; overlap guarded by an in-process flag (single container, 1 replica — noted in deploy docs).
 
 ## Testing
 
@@ -92,7 +91,7 @@ Vitest. Adapters tested against saved fixture responses (JSON/HTML snapshots per
 
 ## Cost & deployment
 
-€0/month: Vercel Hobby (app), Neon free (DB), Cloudflare free (cron Worker), Resend free (email), VAPID keys self-generated. Deployment docs in README: Neon setup, Vercel env vars (`DATABASE_URL`, `CRON_SECRET`, `VAPID_*`, `RESEND_API_KEY`), CF Worker deploy via wrangler. Domain (e.g. woismeineporta.at) optional, works on `*.vercel.app` first.
+~€0 marginal: single Docker container on Julian's existing Dokploy instance (multi-stage Dockerfile, Next.js standalone output, volume mount `/data` for SQLite), Resend free (email), VAPID keys self-generated. Deployment docs in README: Dokploy app setup (build from Dockerfile, volume, 1 replica), env vars (`DATABASE_PATH`, `ENABLE_POLLER`, `POLL_FAST_MS`, `POLL_SLOW_MS`, `ADMIN_SECRET`, `VAPID_PUBLIC_KEY`, `VAPID_PRIVATE_KEY`, `VAPID_SUBJECT`, `RESEND_API_KEY`, `PUBLIC_BASE_URL`). Web Push requires HTTPS — Dokploy's Traefik/Let's Encrypt handles that. Domain (e.g. woismeineporta.at) pointed at the Dokploy host.
 
 ## Out of scope (v1)
 
