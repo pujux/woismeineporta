@@ -11,7 +11,7 @@ accessibility statements refer to plain Node `fetch` with browser-like headers
 | OBI | ✓ PDP JSON-LD | ✓ 79 stores, exact quantities | works |
 | MediaMarkt | ✓ PDP JSON-LD + `onlineStatus` | aggregate pickup signal only (per-store API blocked) | PDP works, GraphQL 403 (Akamai) |
 | Tepto | ✓ PDP JSON-LD (base variant only) | — | works |
-| BAUHAUS | best effort | — | **blocked** (Cloudflare challenge on every non-browser request, incl. in-page XHR to unknown paths) |
+| BAUHAUS | ✓ (via impit) | — (needs OAuth token against api.bauhaus) | Cloudflare-blocked for plain fetch; **cleared with impit Chrome TLS impersonation** |
 | Hornbach | — | — | **dropped: does not sell the PortaSplit in Austria** (0 search results on hornbach.at) |
 
 ## OBI (obi.at)
@@ -30,7 +30,7 @@ accessibility statements refer to plain Node `fetch` with browser-like headers
 - PDP HTML (~1 MB) fetchable server-side. Contains:
   - JSON-LD `Product.offers` (price, `availability`)
   - `window.__PRELOADED_STATE__` (JS object literal, NOT valid JSON — contains `undefined`; extract fields via regex): `"onlineStatus\":\"..."` (e.g. `TEMPORARILY_NOT_AVAILABLE`), pickup `"displayStatus\":\"..."` (e.g. `PARTIALLY_AVAILABLE` = available in some markets).
-- Per-store availability: GraphQL persisted query `GetClosestStoresByZipCodeOrCityWithFoundLocation` on `/api/v1/graphql` — **403 for curl AND Node fetch even with browser cookies** (Akamai TLS fingerprinting). Not usable server-side; do not ship an adapter that depends on it. We surface the aggregate pickup `displayStatus` instead ("in einzelnen Märkten verfügbar").
+- Per-store availability: GraphQL persisted query `GetClosestStoresByZipCodeOrCityWithFoundLocation` on `/api/v1/graphql` — **403 for curl, Node fetch, AND impit** (even with warmed cookies + Referer). Akamai here requires JS-computed sensor data, i.e. a headless browser — out of scope for a lightweight server. We surface the aggregate pickup `displayStatus` instead ("in einzelnen Märkten verfügbar").
 - There is also an older grey variant PDP (`142245268`) with `onlineStatus: NO_VALID_MP_OFFER_PRICE` — ignore.
 
 ## Tepto (tepto.at)
@@ -42,10 +42,10 @@ accessibility statements refer to plain Node `fetch` with browser-like headers
 ## BAUHAUS (bauhaus.at)
 
 - PortaSplit PDP: `https://www.bauhaus.at/klimaanlagen/midea-klimasplitgeraet-portasplit-12000-btu/p/31934233` (Prod.Nr. `31934233`)
-- Behind Cloudflare bot management: every non-browser request → 403 challenge page ("Sicherheitsprüfung"). Even in-browser `fetch()` to API-ish paths is challenged. Store-level ("Fachcentrum") data not reachable; the PDP itself renders no per-store availability for sold-out items.
-- Page JSON-LD (captured via real browser 2026-07-06): price 749 €, `OutOfStock`.
-- Adapter strategy: attempt PDP fetch each slow tick; expect `AdapterHttpError(403)` → status `unknown`. If Bauhaus ever loosens the protection, the JSON-LD parser takes over automatically. UI shows the deep link regardless.
-- No Cool variant found on bauhaus.at (only the 12.000 BTU model).
+- Behind Cloudflare bot management: plain `curl`/Node fetch → 403 challenge ("Sicherheitsprüfung"). **Solved with [impit](https://www.npmjs.com/package/impit)** (`{ browser: "chrome" }`), which impersonates Chrome's TLS + HTTP/2 fingerprint — returns the real PDP (verified 2026-07-06). The whole poller now fetches through impit (`src/lib/retailers/impit-fetch.ts`).
+- Online status/price parse from JSON-LD like the others (749 €, `OutOfStock` at capture time).
+- **Store-level ("Fachcentrum") data:** the PDP references `https://api.bauhaus/v1/product-stock/{cc}/products/{id}/warehouses/{wh}/stock` and a product-finder endpoint, but they require an OAuth bearer token (`401 Invalid access token` without one; the page holds only an `apikey`, the token is fetched at runtime). Not implemented — would need reverse-engineering the token exchange and is fragile. Adapter is online-status only.
+- No Cool variant on bauhaus.at (only the 12.000 BTU model).
 
 ## Fixtures (`src/lib/retailers/__fixtures__/`)
 

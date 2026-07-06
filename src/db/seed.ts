@@ -20,8 +20,7 @@ export async function seed(db: DataSource): Promise<void> {
   );
 
   // Placeholder offers (status unknown) so every tracked retailer/variant pair
-  // shows up in the UI with its deep link even before the first successful
-  // check — Bauhaus in particular never succeeds server-side.
+  // shows up in the UI with its deep link even before the first check runs.
   const knownOffers = [
     {
       retailerSlug: "bauhaus",

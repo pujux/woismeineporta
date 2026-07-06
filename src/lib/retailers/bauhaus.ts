@@ -5,10 +5,12 @@ import type { RetailerAdapter } from "./types";
 const URL =
   "https://www.bauhaus.at/klimaanlagen/midea-klimasplitgeraet-portasplit-12000-btu/p/31934233";
 
-// bauhaus.at sits behind Cloudflare bot management: server-side requests get a
-// 403 challenge (see docs/retailers.md). This adapter therefore usually throws
-// AdapterHttpError(403) and the poller reports the retailer as "unknown". If the
-// protection is ever relaxed, the JSON-LD parser takes over automatically.
+// bauhaus.at sits behind Cloudflare bot management. The poller fetches through
+// impit (Chrome TLS impersonation, see impit-fetch.ts), which clears the
+// challenge and returns the real PDP — so online status/price parse normally.
+// Store-level ("Fachcentrum") data would need an OAuth token against api.bauhaus
+// and is not covered. If Cloudflare ever tightens again, this throws
+// AdapterHttpError(403) and the poller degrades the retailer to "unknown".
 export const bauhausAdapter: RetailerAdapter = {
   slug: "bauhaus",
   tier: "slow",

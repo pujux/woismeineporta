@@ -3,6 +3,7 @@ import { getDb } from "@/db";
 import { computeDiff } from "./diff";
 import { notifyEvents } from "./notify/orchestrator";
 import { AdapterHttpError } from "./retailers/fetch";
+import { impitFetch } from "./retailers/impit-fetch";
 import { adapters } from "./retailers/registry";
 import type { RetailerAdapter } from "./retailers/types";
 import { loadPrevState, markUnknown, persistResult } from "./state";
@@ -57,7 +58,7 @@ export async function runTick(db: AppDb, opts: TickOptions): Promise<TickSummary
     now,
     force = false,
     adapterList = adapters,
-    fetchFn = fetch,
+    fetchFn = impitFetch,
     notify = notifyEvents,
     state = globalState,
     fastMs = envInt("POLL_FAST_MS", 30_000),
