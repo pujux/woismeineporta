@@ -1,25 +1,140 @@
 [
-  { "id": "757", "name": "BAUHAUS Innsbruck-Völs", "zip": "6176", "city": "Völs" },
-  { "id": "758", "name": "BAUHAUS Salzburg", "zip": "5020", "city": "Salzburg" },
-  { "id": "761", "name": "BAUHAUS Seiersberg", "zip": "8054", "city": "Seiersberg" },
-  { "id": "762", "name": "BAUHAUS Steyr", "zip": "4400", "city": "Steyr" },
-  { "id": "763", "name": "BAUHAUS St. Pölten", "zip": "3100", "city": "St. Pölten" },
-  { "id": "765", "name": "BAUHAUS Wien-Ottakring", "zip": "1160", "city": "Wien" },
-  { "id": "774", "name": "BAUHAUS Wels", "zip": "4600", "city": "Wels" },
-  { "id": "776", "name": "BAUHAUS Wien Kagran", "zip": "1220", "city": "Wien" },
-  { "id": "780", "name": "BAUHAUS Langenzersdorf", "zip": "2103", "city": "Langenzersdorf" },
-  { "id": "782", "name": "BAUHAUS Wien Hütteldorf", "zip": "1140", "city": "Wien" },
-  { "id": "785", "name": "BAUHAUS Wien Arsenalstraße", "zip": "1030", "city": "Wien" },
-  { "id": "787", "name": "BAUHAUS Bregenz", "zip": "6900", "city": "Bregenz" },
-  { "id": "788", "name": "BAUHAUS Pasching", "zip": "4061", "city": "Pasching" },
-  { "id": "790", "name": "BAUHAUS Wiener Neudorf", "zip": "2351", "city": "Wiener Neudorf" },
-  { "id": "791", "name": "BAUHAUS Wien Hirschstetten", "zip": "1220", "city": "Wien" },
-  { "id": "793", "name": "BAUHAUS Bad Fischau-Brunn", "zip": "2721", "city": "Bad Fischau-Brunn" },
-  { "id": "794", "name": "BAUHAUS Wien Oberlaa", "zip": "1230", "city": "Wien" },
-  { "id": "795", "name": "BAUHAUS Wien Brigittenau", "zip": "1200", "city": "Wien" },
-  { "id": "796", "name": "BAUHAUS Klagenfurt", "zip": "9020", "city": "Klagenfurt" },
-  { "id": "797", "name": "BAUHAUS Villach", "zip": "9500", "city": "Villach" },
-  { "id": "798", "name": "BAUHAUS Linz", "zip": "4020", "city": "Linz" },
-  { "id": "799", "name": "BAUHAUS Wals-Siezenheim", "zip": "5071", "city": "Wals-Siezenheim" },
-  { "id": "750", "name": "BAUHAUS Dornbirn", "zip": "6850", "city": "Dornbirn" }
+  {
+    "id": "757",
+    "name": "Innsbruck-Völs",
+    "zip": "6176",
+    "city": "Völs"
+  },
+  {
+    "id": "758",
+    "name": "Salzburg",
+    "zip": "5020",
+    "city": "Salzburg"
+  },
+  {
+    "id": "761",
+    "name": "Seiersberg",
+    "zip": "8054",
+    "city": "Seiersberg"
+  },
+  {
+    "id": "762",
+    "name": "Steyr",
+    "zip": "4400",
+    "city": "Steyr"
+  },
+  {
+    "id": "763",
+    "name": "St. Pölten",
+    "zip": "3100",
+    "city": "St. Pölten"
+  },
+  {
+    "id": "765",
+    "name": "Wien-Ottakring",
+    "zip": "1160",
+    "city": "Wien"
+  },
+  {
+    "id": "774",
+    "name": "Wels",
+    "zip": "4600",
+    "city": "Wels"
+  },
+  {
+    "id": "776",
+    "name": "Wien Kagran",
+    "zip": "1220",
+    "city": "Wien"
+  },
+  {
+    "id": "780",
+    "name": "Langenzersdorf",
+    "zip": "2103",
+    "city": "Langenzersdorf"
+  },
+  {
+    "id": "782",
+    "name": "Wien Hütteldorf",
+    "zip": "1140",
+    "city": "Wien"
+  },
+  {
+    "id": "785",
+    "name": "Wien Arsenalstraße",
+    "zip": "1030",
+    "city": "Wien"
+  },
+  {
+    "id": "787",
+    "name": "Bregenz",
+    "zip": "6900",
+    "city": "Bregenz"
+  },
+  {
+    "id": "788",
+    "name": "Pasching",
+    "zip": "4061",
+    "city": "Pasching"
+  },
+  {
+    "id": "790",
+    "name": "Wiener Neudorf",
+    "zip": "2351",
+    "city": "Wiener Neudorf"
+  },
+  {
+    "id": "791",
+    "name": "Wien Hirschstetten",
+    "zip": "1220",
+    "city": "Wien"
+  },
+  {
+    "id": "793",
+    "name": "Bad Fischau-Brunn",
+    "zip": "2721",
+    "city": "Bad Fischau-Brunn"
+  },
+  {
+    "id": "794",
+    "name": "Wien Oberlaa",
+    "zip": "1230",
+    "city": "Wien"
+  },
+  {
+    "id": "795",
+    "name": "Wien Brigittenau",
+    "zip": "1200",
+    "city": "Wien"
+  },
+  {
+    "id": "796",
+    "name": "Klagenfurt",
+    "zip": "9020",
+    "city": "Klagenfurt"
+  },
+  {
+    "id": "797",
+    "name": "Villach",
+    "zip": "9500",
+    "city": "Villach"
+  },
+  {
+    "id": "798",
+    "name": "Linz",
+    "zip": "4020",
+    "city": "Linz"
+  },
+  {
+    "id": "799",
+    "name": "Wals-Siezenheim",
+    "zip": "5071",
+    "city": "Wals-Siezenheim"
+  },
+  {
+    "id": "750",
+    "name": "Dornbirn",
+    "zip": "6850",
+    "city": "Dornbirn"
+  }
 ]
