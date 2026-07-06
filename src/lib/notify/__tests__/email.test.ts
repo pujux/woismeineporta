@@ -1,0 +1,88 @@
+import { beforeEach, describe, expect, it, vi } from "vitest";
+import { createDb, EmailSubscriptionEntity, type AppDb } from "@/db";
+import {
+  confirmEmail,
+  createEmailSubscription,
+  sendAlertEmail,
+  unsubscribeEmail,
+} from "@/lib/notify/email";
+
+describe("email subscriptions", () => {
+  let db: AppDb;
+  const send = vi.fn().mockResolvedValue(undefined);
+
+  beforeEach(async () => {
+    db = await createDb(":memory:");
+    send.mockClear();
+  });
+
+  it("creates an unconfirmed subscription and sends a confirm mail", async () => {
+    const result = await createEmailSubscription(
+      db,
+      { email: "julian@example.at", variantSlugs: ["portasplit"] },
+      send,
+    );
+    expect(result).toBe("created");
+    const row = await db.getRepository(EmailSubscriptionEntity).findOneByOrFail({
+      email: "julian@example.at",
+    });
+    expect(row.confirmed).toBe(false);
+    expect(send).toHaveBeenCalledOnce();
+    const [to, subject, html] = send.mock.calls[0];
+    expect(to).toBe("julian@example.at");
+    expect(subject).toContain("bestätigen");
+    expect(html).toContain(`/api/subscribe/email/confirm?token=${row.confirmToken}`);
+  });
+
+  it("re-sends with a fresh token for duplicate emails", async () => {
+    await createEmailSubscription(db, { email: "a@b.at", variantSlugs: ["portasplit"] }, send);
+    const first = await db.getRepository(EmailSubscriptionEntity).findOneByOrFail({ email: "a@b.at" });
+    const result = await createEmailSubscription(db, { email: "a@b.at", variantSlugs: ["portasplit"] }, send);
+    expect(result).toBe("resent");
+    const second = await db.getRepository(EmailSubscriptionEntity).findOneByOrFail({ email: "a@b.at" });
+    expect(second.confirmToken).not.toBe(first.confirmToken);
+    expect(send).toHaveBeenCalledTimes(2);
+    expect(await db.getRepository(EmailSubscriptionEntity).count()).toBe(1);
+  });
+
+  it("rejects invalid emails and variants without sending", async () => {
+    expect(await createEmailSubscription(db, { email: "nope", variantSlugs: ["portasplit"] }, send)).toBe("invalid");
+    expect(await createEmailSubscription(db, { email: "a@b.at", variantSlugs: [] }, send)).toBe("invalid");
+    expect(await createEmailSubscription(db, { email: "a@b.at", variantSlugs: ["x"] }, send)).toBe("invalid");
+    expect(send).not.toHaveBeenCalled();
+  });
+
+  it("confirms with the right token only", async () => {
+    await createEmailSubscription(db, { email: "a@b.at", variantSlugs: ["portasplit"] }, send);
+    const row = await db.getRepository(EmailSubscriptionEntity).findOneByOrFail({ email: "a@b.at" });
+    expect(await confirmEmail(db, "wrong")).toBe(false);
+    expect(await confirmEmail(db, row.confirmToken)).toBe(true);
+    const after = await db.getRepository(EmailSubscriptionEntity).findOneByOrFail({ email: "a@b.at" });
+    expect(after.confirmed).toBe(true);
+  });
+
+  it("unsubscribes by deleting the row", async () => {
+    await createEmailSubscription(db, { email: "a@b.at", variantSlugs: ["portasplit"] }, send);
+    const row = await db.getRepository(EmailSubscriptionEntity).findOneByOrFail({ email: "a@b.at" });
+    expect(await unsubscribeEmail(db, "wrong")).toBe(false);
+    expect(await unsubscribeEmail(db, row.unsubscribeToken)).toBe(true);
+    expect(await db.getRepository(EmailSubscriptionEntity).count()).toBe(0);
+  });
+
+  it("sendAlertEmail includes the unsubscribe link", async () => {
+    await createEmailSubscription(db, { email: "a@b.at", variantSlugs: ["portasplit"] }, send);
+    const row = await db.getRepository(EmailSubscriptionEntity).findOneByOrFail({ email: "a@b.at" });
+    send.mockClear();
+    const result = await sendAlertEmail(db, row.id, "Porta da!", "<p>Jetzt!</p>", send);
+    expect(result).toBe("sent");
+    const [, , html] = send.mock.calls[0];
+    expect(html).toContain(`unsubscribe?token=${row.unsubscribeToken}`);
+  });
+
+  it("sendAlertEmail returns failed when the provider errors", async () => {
+    await createEmailSubscription(db, { email: "a@b.at", variantSlugs: ["portasplit"] }, send);
+    const row = await db.getRepository(EmailSubscriptionEntity).findOneByOrFail({ email: "a@b.at" });
+    const failing = vi.fn().mockRejectedValue(new Error("cap"));
+    expect(await sendAlertEmail(db, row.id, "s", "<p>x</p>", failing)).toBe("failed");
+  });
+});
