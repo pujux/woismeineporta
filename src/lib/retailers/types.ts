@@ -6,6 +6,8 @@ export interface OnlineOffer {
   url: string;
   priceCents: number | null;
   status: StockStatus;
+  /** Extra human-readable availability hint (e.g. MediaMarkt aggregate pickup signal). */
+  pickupNote?: string | null;
 }
 
 export interface StoreInfo {
