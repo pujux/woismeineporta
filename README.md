@@ -1,48 +1,74 @@
 # Wo is meine Porta?
 
 Verfügbarkeits-Tracker für die **Midea PortaSplit** und **PortaSplit Cool** in Österreich —
-inspiriert von bestell.bar, aber für genau ein Produkt. Prüft österreichische Händler im
-30-Sekunden-Takt und verschickt Sofort-Alarme per Web Push und E-Mail, sobald das Gerät
-wieder bestellbar ist.
+inspiriert von bestell.bar, aber für genau ein Produkt. Prüft österreichische Händler
+laufend (30-Sekunden-Takt für die schnelle Stufe) und schickt Sofort-Alarme per Web Push
+oder E-Mail, sobald das Gerät wieder bestellbar ist — online **und** je Filiale.
 
-**Stack:** Next.js 16 (App Router, standalone), TypeScript, Tailwind v4, TypeORM +
-better-sqlite3, web-push, Resend. Läuft als ein einziger Docker-Container (Dokploy),
-SQLite auf einem Volume — keine weiteren Dienste nötig.
+**Stack:** Next.js 16 (App Router, React Compiler, `output: standalone`), React 19,
+TypeScript 6, Tailwind v4, TypeORM + better-sqlite3, [impit](https://github.com/apify/impit)
+(Chrome-Fingerprint-Fetch für Cloudflare-geschützte Händler), Leaflet + OpenStreetMap,
+web-push, Resend. Läuft auf Node 24 als **ein einziger Docker-Container** (Dokploy), SQLite
+auf einem Volume — keine weiteren Dienste (kein Redis, keine DB, kein Headless-Browser).
+
+## Features
+
+- **Online- und Filial-Verfügbarkeit** für beide Varianten, laufend geprüft.
+- **Sofort-Alarm** per **Web Push** (VAPID) oder **E-Mail** (Double-Opt-in via Resend),
+  variantengenau, optional zusätzlich für Filialen im PLZ-Umkreis. 60-Minuten-Cooldown
+  gegen Alarm-Spam.
+- **Live ohne Client-Polling:** Server-Sent Events (`/api/live`) — der Client aktualisiert
+  nur, wenn ein Tick echte Änderungen produziert.
+- **Filialkarte** (Leaflet + OSM, kein API-Key): PLZ- **und** Standortsuche
+  („In meiner Nähe"), Händlerfilter, Cluster nach Verfügbarkeit eingefärbt
+  (rot = keine · gelb = eine · grün = mehrere lagernd), Karte ↔ Liste synchronisiert.
+- **SEO:** Product/FAQ JSON-LD, `sitemap.xml`, `robots.txt`, OpenGraph.
+- **Sicherheit:** Content-Security-Policy + Security-Header, Per-IP-Rate-Limiting auf den
+  öffentlichen API-Routen, Double-Opt-in gegen E-Mail-Missbrauch.
+- **Barrierefrei:** WCAG-AA-Kontraste (hell & dunkel), `prefers-reduced-motion`,
+  semantisches HTML.
+- **Selbstpflegend:** automatische Bereinigung alter Events/Logs, Container-Healthcheck,
+  Env-Prüfung beim Start (fehlende Push/E-Mail-Konfiguration wird geloggt, nicht fatal).
 
 ## Händler-Abdeckung
 
-| Händler    | Online-Status                                           | Filial-Bestand                                     |
-| ---------- | ------------------------------------------------------- | -------------------------------------------------- |
-| OBI        | ✓                                                       | ✓ (79 Märkte, exakte Verfügbarkeit)                |
-| MediaMarkt | ✓                                                       | nur Sammelsignal („in einzelnen Märkten abholbar") |
-| Tepto      | ✓ (nur PortaSplit)                                      | —                                                  |
-| BAUHAUS    | best effort (Cloudflare-blockiert → „Status unbekannt") | —                                                  |
+| Händler    | Online-Status      | Filial-Bestand                                       |
+| ---------- | ------------------ | ---------------------------------------------------- |
+| OBI        | ✓                  | ✓ je Filiale (exakte Stückzahl, OBI Store-Locator)   |
+| BAUHAUS    | ✓                  | ✓ je Filiale (23 Fachcentren, öffentliche api.bauhaus) |
+| MediaMarkt | ✓                  | nur Sammelsignal („in einzelnen Märkten abholbar")   |
+| Tepto      | ✓ (nur PortaSplit) | —                                                    |
 
-Details und Endpoints: [docs/retailers.md](docs/retailers.md).
+BAUHAUS und MediaMarkt sind Cloudflare-geschützt; die Online-Seiten werden per
+impit (Chrome-TLS/HTTP-Fingerprint) abgerufen. Die BAUHAUS-Filialdaten kommen ohne
+Headless-Browser über die öffentliche `api.bauhaus` (apiKey aus der PDP + Origin-Header).
+MediaMarkts Filial-API liegt hinter aggressiver Bot-Abwehr, die impit **nicht** passiert —
+daher nur das Sammelsignal. Details und Endpoints: [docs/retailers.md](docs/retailers.md).
 
-Die Filialkarte (Leaflet + OpenStreetMap-Kacheln, kein API-Key nötig) zeigt alle Märkte mit
-Verfügbarkeitsstatus; eine PLZ-Suche zoomt auf den Umkreis.
+## Live-Updates
 
-**Live-Updates:** Statt Polling hält der Client eine Server-Sent-Events-Verbindung
-(`/api/live`). Der Poller sendet über einen In-Process-Bus (`src/lib/live-bus.ts`) nur dann
-ein `change`-Event, wenn ein Tick echte Statusänderungen produziert — dann aktualisiert der
-Client sofort per `router.refresh()`. Zwischen Änderungen fällt weder Server-Render- noch
-Payload-Last an (nur SSE-Heartbeats). Relative Zeitstempel („vor 3 Min geprüft") tickt der
-Client selbst, unabhängig vom Refresh. Fällt SSE aus (Proxy), greift ein 2-Minuten-Fallback
-plus Refresh bei Tab-Fokus.
+Statt Polling hält der Client eine Server-Sent-Events-Verbindung (`/api/live`). Der Poller
+sendet über einen In-Process-Bus (`src/lib/live-bus.ts`) nur dann ein `change`-Event, wenn
+ein Tick echte Statusänderungen produziert — dann aktualisiert der Client sofort per
+`router.refresh()`. Zwischen Änderungen fällt weder Server-Render- noch Payload-Last an (nur
+SSE-Heartbeats). Relative Zeitstempel („vor 3 Min geprüft") tickt der Client selbst,
+unabhängig vom Refresh. Fällt SSE aus (Proxy), greift ein 2-Minuten-Fallback plus Refresh
+bei Tab-Fokus.
 
 ## Entwicklung
 
 ```bash
 pnpm install
-cp .env.example .env          # Werte eintragen, siehe unten
+cp .env.example .env               # Werte eintragen, siehe unten
 npx web-push generate-vapid-keys   # → VAPID_PUBLIC_KEY / VAPID_PRIVATE_KEY
-pnpm dev                      # http://localhost:3000
-pnpm test                     # Vitest
+pnpm dev                           # http://localhost:3000
+pnpm test                          # Vitest
+pnpm lint                          # ESLint
+pnpm build                         # Produktions-Build (Turbopack)
 ```
 
-Der Poller startet nur mit `ENABLE_POLLER=1` (in dev standardmäßig aus). Ein einzelner
-Check lässt sich jederzeit manuell auslösen:
+Der Poller startet nur mit `ENABLE_POLLER=1` (in dev standardmäßig aus). Ein einzelner Check
+lässt sich jederzeit manuell auslösen:
 
 ```bash
 curl -X POST -H "Authorization: Bearer $ADMIN_SECRET" http://localhost:3000/api/admin/check
@@ -50,28 +76,37 @@ curl -X POST -H "Authorization: Bearer $ADMIN_SECRET" http://localhost:3000/api/
 
 ## Umgebungsvariablen
 
-| Variable                                                   | Zweck                                                                                          |
+| Variable                                                   | Zweck                                                                                           |
 | ---------------------------------------------------------- | ---------------------------------------------------------------------------------------------- |
-| `DATABASE_PATH`                                            | SQLite-Datei (Container: `/data/app.db`)                                                       |
-| `ENABLE_POLLER`                                            | `1` = Verfügbarkeits-Poller läuft im Prozess                                                   |
-| `POLL_FAST_MS` / `POLL_SLOW_MS`                            | Intervalle (Default 30.000 / 180.000 ms)                                                       |
-| `ADMIN_SECRET`                                             | Bearer-Token für `POST /api/admin/check`                                                       |
-| `VAPID_PUBLIC_KEY` / `VAPID_PRIVATE_KEY` / `VAPID_SUBJECT` | Web Push (`npx web-push generate-vapid-keys`; Subject = `mailto:…`)                            |
+| `DATABASE_PATH`                                            | SQLite-Datei (Container: `/data/app.db`)                                                        |
+| `ENABLE_POLLER`                                            | `1` = Verfügbarkeits-Poller läuft im Prozess                                                    |
+| `POLL_FAST_MS` / `POLL_SLOW_MS`                            | Intervalle (Default 30.000 / 180.000 ms)                                                        |
+| `ADMIN_SECRET`                                             | Bearer-Token für `POST /api/admin/check` (`openssl rand -hex 32`)                               |
+| `VAPID_PUBLIC_KEY` / `VAPID_PRIVATE_KEY` / `VAPID_SUBJECT` | Web Push (`npx web-push generate-vapid-keys`; Subject = `mailto:…`)                             |
 | `RESEND_API_KEY` / `EMAIL_FROM`                            | E-Mail-Alarme via [Resend](https://resend.com) (Domain verifizieren, Free-Tier: 100 Mails/Tag) |
-| `PUBLIC_BASE_URL`                                          | Öffentliche URL, wird in E-Mail-Links verwendet                                                |
+| `PUBLIC_BASE_URL`                                          | Öffentliche URL — für Canonical/OpenGraph, `sitemap.xml`/`robots.txt` und E-Mail-Links         |
+
+Fehlende Push-/E-Mail-/URL-Variablen sind kein Fehler: das jeweilige Feature bleibt
+deaktiviert und wird beim Start geloggt (`[env] … disabled/degraded — missing: …`).
 
 ## Deployment auf Dokploy
 
 1. **App anlegen:** Neues Projekt → Application → Source: dieses Git-Repo, Build Type
    **Dockerfile**.
-2. **Volume:** Mount `/data` (Volume-Name z. B. `porta-data`) — dort liegt die SQLite-DB.
-   Backup = diese eine Datei sichern.
+2. **Volume:** Mount `/data` (Volume-Name z. B. `porta-data`) — dort liegt die SQLite-DB mit
+   Abos und Verlauf. **Wichtig:** ohne Volume gehen bei jedem Redeploy alle Abonnements
+   verloren. Backup = diese eine Datei sichern.
 3. **Env-Vars** aus der Tabelle oben setzen (`ENABLE_POLLER=1`, `DATABASE_PATH=/data/app.db`
-   sind im Image schon Default).
-4. **Replicas: 1** — der Poller läuft im App-Prozess; mehrere Replicas würden doppelt
-   pollen und doppelt benachrichtigen.
-5. **Domain + HTTPS** über Dokploy/Traefik (Let's Encrypt). HTTPS ist Pflicht für Web Push.
-6. Deploy. Logs zeigen `[poller] starting, tick every 30000ms` und danach die Tick-Summaries.
+   sind im Image schon Default). `PUBLIC_BASE_URL` auf die echte Domain setzen.
+4. **Replicas: 1** — der Poller läuft im App-Prozess; mehrere Replicas würden doppelt pollen
+   und doppelt benachrichtigen.
+5. **Domain + HTTPS** über Dokploy/Traefik (Let's Encrypt). HTTPS ist Pflicht für Web Push
+   und die Standortsuche.
+6. Deploy. Der Container bringt einen `HEALTHCHECK` auf `/api/status` mit; die Logs zeigen
+   `[poller] starting, tick every 30000ms` und danach die Tick-Summaries.
+
+Das Produktions-Image ist verifiziert (Node 24, nativer better-sqlite3-Build,
+`pnpm --frozen-lockfile`, standalone).
 
 ### Schema-Änderungen
 
@@ -85,8 +120,8 @@ angelegt. Vor Updates mit Schema-Änderungen die DB-Datei sichern (`/data/app.db
   (DSGVO) in `src/app/datenschutz/page.tsx` — beim Fork mit eigenen Angaben ersetzen.
 - PLZ-Geodaten: [GeoNames](https://www.geonames.org/) (CC BY 4.0), Build via
   `pnpm tsx scripts/build-plz.ts`.
-- iOS-Push funktioniert erst, wenn die Seite zum Home-Bildschirm hinzugefügt wurde
-  (PWA) — die UI weist darauf hin.
+- iOS-Push funktioniert erst, wenn die Seite zum Home-Bildschirm hinzugefügt wurde (PWA) —
+  die UI weist darauf hin.
 
 ## Lizenz
 
