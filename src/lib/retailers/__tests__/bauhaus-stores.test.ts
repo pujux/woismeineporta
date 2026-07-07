@@ -26,9 +26,9 @@ describe("fetchBauhausStoreStock", () => {
         JSON.stringify({ amount: inStock ? 4 : 0, availibility_level: inStock ? "IN_STOCK" : "OUT_OF_STOCK" }),
         { status: 200 },
       );
-    }) as unknown as typeof fetch;
+    });
 
-    const result = await fetchBauhausStoreStock(fetchFn, "pubkey");
+    const result = await fetchBauhausStoreStock(fetchFn as unknown as typeof fetch, "pubkey");
     expect(result.length).toBe(23); // all AT Fachcentren, geo resolved via PLZ
     expect(result.filter((s) => s.inStock)).toHaveLength(2);
 
@@ -37,7 +37,7 @@ describe("fetchBauhausStoreStock", () => {
     expect(sample.store.externalId).toMatch(/^\d+$/);
     expect(sample.store.lat).toBeGreaterThan(46);
 
-    const [url, init] = fetchFn.mock.calls[0];
+    const [url, init] = fetchFn.mock.calls[0] as unknown as [string, RequestInit];
     expect(String(url)).toContain("/v1/product-stock/at/products/31934233/warehouses/");
     const h = new Headers(init.headers);
     expect(h.get("apikey")).toBe("pubkey");
