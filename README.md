@@ -8,13 +8,13 @@ oder E-Mail, sobald das Gerät wieder bestellbar ist — online **und** je Filia
 **Stack:** Next.js 16 (App Router, React Compiler, `output: standalone`), React 19,
 TypeScript 6, Tailwind v4, TypeORM + better-sqlite3, [impit](https://github.com/apify/impit)
 (Chrome-Fingerprint-Fetch für Cloudflare-geschützte Händler), Leaflet + OpenStreetMap,
-web-push, Resend. Läuft auf Node 24 als **ein einziger Docker-Container** (Dokploy), SQLite
+web-push, Brevo (EU-E-Mail). Läuft auf Node 24 als **ein einziger Docker-Container** (Dokploy), SQLite
 auf einem Volume — keine weiteren Dienste (kein Redis, keine DB, kein Headless-Browser).
 
 ## Features
 
 - **Online- und Filial-Verfügbarkeit** für beide Varianten, laufend geprüft.
-- **Sofort-Alarm** per **Web Push** (VAPID) oder **E-Mail** (Double-Opt-in via Resend),
+- **Sofort-Alarm** per **Web Push** (VAPID) oder **E-Mail** (Double-Opt-in via Brevo),
   variantengenau, optional zusätzlich für Filialen im PLZ-Umkreis. 60-Minuten-Cooldown
   gegen Alarm-Spam.
 - **Live ohne Client-Polling:** Server-Sent Events (`/api/live`) — der Client aktualisiert
@@ -83,7 +83,7 @@ curl -X POST -H "Authorization: Bearer $ADMIN_SECRET" http://localhost:3000/api/
 | `POLL_FAST_MS` / `POLL_SLOW_MS`                            | Intervalle (Default 30.000 / 180.000 ms)                                                        |
 | `ADMIN_SECRET`                                             | Bearer-Token für `POST /api/admin/check` (`openssl rand -hex 32`)                               |
 | `VAPID_PUBLIC_KEY` / `VAPID_PRIVATE_KEY` / `VAPID_SUBJECT` | Web Push (`npx web-push generate-vapid-keys`; Subject = `mailto:…`)                             |
-| `RESEND_API_KEY` / `EMAIL_FROM`                            | E-Mail-Alarme via [Resend](https://resend.com) (Domain verifizieren, Free-Tier: 100 Mails/Tag) |
+| `BREVO_API_KEY` / `EMAIL_FROM` / `EMAIL_REPLY_TO`          | E-Mail-Alarme via [Brevo](https://brevo.com) (EU; Domain verifizieren, Free-Tier: 300 Mails/Tag) |
 | `PUBLIC_BASE_URL`                                          | Öffentliche URL — für Canonical/OpenGraph, `sitemap.xml`/`robots.txt` und E-Mail-Links         |
 
 Fehlende Push-/E-Mail-/URL-Variablen sind kein Fehler: das jeweilige Feature bleibt
@@ -112,6 +112,29 @@ Das Produktions-Image ist verifiziert (Node 24, nativer better-sqlite3-Build,
 
 TypeORM läuft mit `synchronize: true`: neue Spalten/Tabellen werden beim Start automatisch
 angelegt. Vor Updates mit Schema-Änderungen die DB-Datei sichern (`/data/app.db` kopieren).
+
+### Retailer-Fetches hinter Cloudflare WARP (optional, experimentell)
+
+Wird die Server-IP von Cloudflare geflaggt, liefern **BAUHAUS und MediaMarkt 403** (OBI/Tepto
+sind nicht Cloudflare-geschützt). `RETAILER_PROXY_URL` leitet dann **alle** Retailer-Fetches
+über einen Proxy mit sauberer Egress-IP — z. B. einen Cloudflare-WARP-Sidecar.
+
+**In Cloudflare:** nichts. Free WARP registriert sich selbst; kein Account, kein Zero Trust,
+keine DNS-Änderung nötig (dein Cloudflare-DNS-Account ist davon unberührt).
+
+**In Dokploy** (als **Compose**-Service, am besten separat zum Prod-Deploy zum Testen):
+
+1. Neuen **Compose**-Service anlegen, Repo + Branch `test`, Compose-Datei
+   `docker-compose.warp.yml` (App + `caomingjun/warp`-Sidecar, GOST-Proxy auf `:1080`).
+2. Env-Vars (`VAPID_*`, `BREVO_API_KEY`, `EMAIL_FROM`, `ADMIN_SECRET`, `PUBLIC_BASE_URL`) im
+   Dokploy-UI setzen; `RETAILER_PROXY_URL=socks5://warp:1080` ist in der Compose-Datei schon
+   gesetzt.
+3. Domain im Dokploy-UI auf den `app`-Service (Port 3000) legen, HTTPS an.
+4. Deploy, dann Logs prüfen: verschwinden die `errors` für bauhaus/mediamarkt, klappt WARP.
+
+Hinweis: WARP nutzt Cloudflare-eigene Egress-IPs — ob deren IP von der jeweiligen Bot-Abwehr
+akzeptiert wird, ist nicht garantiert. Klappt es nicht, hilft nur ein Residential-Proxy
+(kostenpflichtig) oder — bei MediaMarkt (reines Online-Signal) — Verzicht.
 
 ## Hinweise
 

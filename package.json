@@ -19,7 +19,6 @@
     "react": "19.2.7",
     "react-dom": "19.2.7",
     "reflect-metadata": "^0.2.2",
-    "resend": "^6.17.1",
     "typeorm": "^1.0.0",
     "web-push": "^3.6.7"
   },
