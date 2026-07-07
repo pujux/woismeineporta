@@ -80,6 +80,17 @@ export function StoreMap({
         maxClusterRadius: 45,
         showCoverageOnHover: false,
         spiderfyOnMaxZoom: true,
+        // Colour the cluster by availability of its stores: red = none in stock,
+        // yellow = exactly one, green = more than one.
+        iconCreateFunction: (c) => {
+          const inStock = c.getAllChildMarkers().filter((m) => (m.options as { inStock?: boolean }).inStock).length;
+          const kind = inStock === 0 ? "none" : inStock === 1 ? "one" : "many";
+          return L.divIcon({
+            html: `<div>${c.getChildCount()}</div>`,
+            className: `mm-cluster mm-cluster-${kind}`,
+            iconSize: L.point(38, 38),
+          });
+        },
       });
       markerByKeyRef.current = new Map();
       for (const s of stores) {
@@ -93,6 +104,7 @@ export function StoreMap({
           `<strong>${esc(s.retailerName)} ${esc(s.name)}</strong><br>${esc(s.zip)} ${esc(s.city)}<br>` +
             (s.inStock ? '<span style="color:#15803d;font-weight:600">Lagernd ✓</span>' : '<span style="color:#b91c1c">Ausverkauft</span>'),
         );
+        (marker.options as { inStock?: boolean }).inStock = s.inStock; // read by iconCreateFunction
         const key = storeKey(s);
         // Selecting on the map ↔ selecting in the list. Opening a popup selects
         // this store; closing it clears the selection.

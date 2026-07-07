@@ -31,15 +31,31 @@
   }
 }
 
-/* Marker-cluster bubbles: markercluster's default palette (light fills, faint
-   numbers) fails WCAG contrast. Force a solid sky-700 bubble with white bold text. */
-.marker-cluster,
-.marker-cluster div {
-  background-color: #0369a1 !important;
+/* Marker-cluster bubbles, coloured by availability of the stores inside:
+   red = none in stock, yellow = one, green = more than one. Contrast-safe number
+   labels (white on the dark red/green, dark text on yellow). */
+.mm-cluster div {
+  width: 38px;
+  height: 38px;
+  line-height: 38px;
+  border-radius: 9999px;
+  text-align: center;
+  font-weight: 700;
+  font-size: 13px;
+  color: #fff;
 }
-.marker-cluster span {
-  color: #fff !important;
-  font-weight: 600;
+.mm-cluster-none div {
+  background: #b91c1c; /* red-700 */
+  box-shadow: 0 0 0 5px rgb(185 28 28 / 0.3);
+}
+.mm-cluster-one div {
+  background: #fbbf24; /* amber-400 */
+  color: #1e293b; /* slate-800 */
+  box-shadow: 0 0 0 5px rgb(251 191 36 / 0.3);
+}
+.mm-cluster-many div {
+  background: #15803d; /* green-700 */
+  box-shadow: 0 0 0 5px rgb(21 128 61 / 0.3);
 }
 
 /* Custom dropdown chevron for <select> (pair with `appearance-none pr-9`),
