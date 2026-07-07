@@ -18,6 +18,19 @@
   animation: pulse-dot 2s ease-in-out infinite;
 }
 
+/* Respect users who ask for reduced motion: kill the pulsing dots, spinners,
+   and transitions instead of looping them. */
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+    scroll-behavior: auto !important;
+  }
+}
+
 /* Custom dropdown chevron for <select> (pair with `appearance-none pr-9`),
    so the arrow has breathing room from the rounded border. */
 .select-chevron {
