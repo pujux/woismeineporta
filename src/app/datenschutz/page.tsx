@@ -1,16 +1,29 @@
 import type { Metadata } from "next";
+import Link from "next/link";
 
 export const metadata: Metadata = { title: "Datenschutz — Wo is meine Porta?" };
 
 export default function Datenschutz() {
   return (
     <main className="mx-auto max-w-3xl px-4 pt-10">
+      <Link href="/" className="mb-4 inline-block text-sm text-sky-700 underline hover:text-sky-800 dark:text-sky-400 dark:hover:text-sky-300">
+        ← Zurück zur Startseite
+      </Link>
       <h1 className="text-2xl font-bold">Datenschutzerklärung</h1>
       <div className="mt-6 space-y-5 text-sm leading-6 text-slate-700 dark:text-slate-300">
         <section>
           <h2 className="font-semibold text-slate-900 dark:text-slate-100">Verantwortlicher</h2>
-          {/* TODO(Julian): mit Impressum-Daten befüllen */}
-          <p>[Name, Adresse, E-Mail — siehe Impressum]</p>
+          <p>
+            Verantwortlich im Sinne der DSGVO ist <strong>Julian Pufler</strong>, Wien, Österreich, erreichbar unter{" "}
+            <a className="underline" href="mailto:julian@pufler.dev">
+              julian@pufler.dev
+            </a>
+            . Dies ist ein privat und unentgeltlich betriebenes, nichtkommerzielles Angebot. Weitere Angaben im{" "}
+            <a className="underline" href="/impressum">
+              Impressum
+            </a>
+            .
+          </p>
         </section>
 
         <section>
