@@ -13,19 +13,19 @@ const STATUS_META = {
   },
   out_of_stock: {
     label: "Ausverkauft",
-    chip: "bg-slate-100 text-slate-600 ring-slate-500/15 dark:bg-slate-800 dark:text-slate-300 dark:ring-slate-600/40",
+    chip: "bg-slate-100 text-slate-700 ring-slate-500/15 dark:bg-slate-800 dark:text-slate-300 dark:ring-slate-600/40",
     dot: "bg-red-500",
     cta: "Beim Händler ansehen",
-    ctaClass: "text-slate-400 dark:text-slate-500",
-    priceClass: "text-sm font-normal text-slate-400 dark:text-slate-500",
+    ctaClass: "text-slate-500 dark:text-slate-400",
+    priceClass: "text-sm font-normal text-slate-500 dark:text-slate-400",
   },
   unknown: {
     label: "Status unbekannt",
-    chip: "bg-slate-100 text-slate-500 ring-slate-500/10 dark:bg-slate-800 dark:text-slate-400 dark:ring-slate-600/30",
+    chip: "bg-slate-100 text-slate-700 ring-slate-500/10 dark:bg-slate-800 dark:text-slate-400 dark:ring-slate-600/30",
     dot: "bg-slate-400",
     cta: "Beim Händler ansehen",
-    ctaClass: "text-slate-400 dark:text-slate-500",
-    priceClass: "text-sm font-normal text-slate-400 dark:text-slate-500",
+    ctaClass: "text-slate-500 dark:text-slate-400",
+    priceClass: "text-sm font-normal text-slate-500 dark:text-slate-400",
   },
 } as const;
 

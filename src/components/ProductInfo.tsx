@@ -20,7 +20,7 @@ export function ProductInfo({ variants }: Readonly<{ variants: VariantInfo[] }>)
           <div key={v.slug} className="rounded-2xl border border-slate-200 bg-white p-5 shadow-sm dark:border-slate-800 dark:bg-slate-900">
             <div className="flex items-baseline justify-between gap-2">
               <h3 className="font-semibold text-slate-900 dark:text-slate-100">{v.name}</h3>
-              <span className="shrink-0 text-xs text-slate-400 dark:text-slate-500">UVP {formatPrice(v.uvpCents)}</span>
+              <span className="shrink-0 text-xs text-slate-500 dark:text-slate-400">UVP {formatPrice(v.uvpCents)}</span>
             </div>
             <p className="mt-2 text-sm leading-relaxed text-slate-600 dark:text-slate-400">{PRODUCT_DESCRIPTIONS[v.slug]}</p>
           </div>

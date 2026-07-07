@@ -16,7 +16,7 @@ export default function Error({ error, reset }: Readonly<{ error: Error & { dige
       <button
         type="button"
         onClick={reset}
-        className="mt-6 rounded-lg bg-sky-600 px-4 py-2 text-sm font-semibold text-white shadow-sm transition hover:bg-sky-500"
+        className="mt-6 rounded-lg bg-sky-800 px-4 py-2 text-sm font-semibold text-white shadow-sm transition hover:bg-sky-700"
       >
         Nochmal versuchen
       </button>

@@ -31,6 +31,17 @@
   }
 }
 
+/* Marker-cluster bubbles: markercluster's default palette (light fills, faint
+   numbers) fails WCAG contrast. Force a solid sky-700 bubble with white bold text. */
+.marker-cluster,
+.marker-cluster div {
+  background-color: #0369a1 !important;
+}
+.marker-cluster span {
+  color: #fff !important;
+  font-weight: 600;
+}
+
 /* Custom dropdown chevron for <select> (pair with `appearance-none pr-9`),
    so the arrow has breathing room from the rounded border. */
 .select-chevron {

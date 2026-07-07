@@ -60,7 +60,7 @@ export default async function Home() {
           <div key={variant.slug}>
             <div className="mb-3 flex items-baseline justify-between border-b border-slate-200 pb-2 dark:border-slate-800">
               <h2 className="text-lg font-semibold">{variant.name}</h2>
-              <span className="text-xs text-slate-400 dark:text-slate-500">UVP {formatPrice(variant.uvpCents)}</span>
+              <span className="text-xs text-slate-500 dark:text-slate-400">UVP {formatPrice(variant.uvpCents)}</span>
             </div>
             {offers.length === 0 ? (
               <p className="rounded-xl border border-dashed border-slate-300 px-4 py-6 text-center text-sm text-slate-400 dark:border-slate-700 dark:text-slate-500">

@@ -50,7 +50,7 @@ export default function RootLayout({
     <html lang="de" className={`${geistSans.variable} h-full antialiased`}>
       <body className="min-h-screen bg-slate-50 font-sans text-slate-900 dark:bg-slate-950 dark:text-slate-100">
         {children}
-        <footer className="mx-auto mt-16 max-w-3xl border-t border-slate-200 px-4 py-8 text-xs text-slate-400 dark:border-slate-800 dark:text-slate-500">
+        <footer className="mx-auto mt-16 max-w-3xl border-t border-slate-200 px-4 py-8 text-xs text-slate-500 dark:border-slate-800 dark:text-slate-400">
           <p>Kein Shop — wir beobachten nur Verfügbarkeiten und verlinken zu den Händlern. Alle Angaben ohne Gewähr, Preise können abweichen.</p>
           <p className="mt-2">
             PLZ-Daten:{" "}

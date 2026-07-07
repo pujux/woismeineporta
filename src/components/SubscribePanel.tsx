@@ -225,7 +225,7 @@ export function SubscribePanel() {
             <button
               onClick={enablePush}
               disabled={pushBusy}
-              className="w-full rounded-lg bg-sky-600 px-4 py-2.5 text-sm font-semibold text-white shadow-sm transition hover:bg-sky-500 disabled:opacity-50"
+              className="w-full rounded-lg bg-sky-800 px-4 py-2.5 text-sm font-semibold text-white shadow-sm transition hover:bg-sky-700 disabled:opacity-50"
             >
               {pushBusy ? "…" : "🔔 Push-Alarm aktivieren"}
             </button>
@@ -239,7 +239,7 @@ export function SubscribePanel() {
         )}
 
         {/* Secondary path: e-mail */}
-        <div className="my-3 flex items-center gap-3 text-xs text-slate-400 dark:text-slate-500">
+        <div className="my-3 flex items-center gap-3 text-xs text-slate-500 dark:text-slate-400">
           <span className="h-px flex-1 bg-slate-200 dark:bg-slate-800" /> oder per E-Mail{" "}
           <span className="h-px flex-1 bg-slate-200 dark:bg-slate-800" />
         </div>

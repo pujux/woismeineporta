@@ -138,7 +138,7 @@ export function StoreFinder() {
         <button
           type="submit"
           disabled={loading}
-          className="rounded-lg bg-sky-600 px-4 py-2 text-sm font-semibold text-white shadow-sm transition hover:bg-sky-500 disabled:opacity-50"
+          className="rounded-lg bg-sky-800 px-4 py-2 text-sm font-semibold text-white shadow-sm transition hover:bg-sky-700 disabled:opacity-50"
         >
           {loading ? "Suche…" : "Filialen suchen"}
         </button>
@@ -204,7 +204,7 @@ export function StoreFinder() {
           )}
 
           <StoreMap stores={visible} focus={focus} selected={selected} onSelectedChange={setSelected} />
-          <p className="mt-2 text-xs text-slate-400 dark:text-slate-500">
+          <p className="mt-2 text-xs text-slate-500 dark:text-slate-400">
             {visible.length} Filialen
             {inStockCount > 0 ? (
               <span className="font-medium text-green-700 dark:text-green-400"> — {inStockCount} davon lagernd 🟢</span>
@@ -251,7 +251,7 @@ export function StoreFinder() {
                           <span className="ml-auto shrink-0 tabular-nums text-slate-500 dark:text-slate-400">{s.distanceKm.toFixed(0)} km</span>
                         )}
                         <span
-                          className={`w-24 shrink-0 text-right text-xs font-medium ${s.inStock ? "text-green-700 dark:text-green-400" : "text-red-500 dark:text-red-400"}`}
+                          className={`w-24 shrink-0 text-right text-xs font-medium ${s.inStock ? "text-green-700 dark:text-green-400" : "text-red-600 dark:text-red-400"}`}
                         >
                           {s.inStock ? "Lagernd" : "Ausverkauft"}
                         </span>

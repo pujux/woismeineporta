@@ -8,7 +8,7 @@ export default function NotFound() {
       <p className="mt-2 text-sm text-slate-600 dark:text-slate-400">Diese Seite gibt&apos;s nicht (mehr). Zurück zur PortaSplit-Verfügbarkeit:</p>
       <Link
         href="/"
-        className="mt-6 rounded-lg bg-sky-600 px-4 py-2 text-sm font-semibold text-white shadow-sm transition hover:bg-sky-500"
+        className="mt-6 rounded-lg bg-sky-800 px-4 py-2 text-sm font-semibold text-white shadow-sm transition hover:bg-sky-700"
       >
         Zur Startseite
       </Link>

@@ -13,8 +13,8 @@ type FilterKey = "all" | "availability" | "price";
 
 const FILTERS: Array<{ key: FilterKey; label: string; active: string }> = [
   { key: "all", label: "Alle", active: "bg-slate-900 text-white dark:bg-white dark:text-slate-900" },
-  { key: "availability", label: "Verfügbarkeit", active: "bg-green-600 text-white" },
-  { key: "price", label: "Preis", active: "bg-sky-600 text-white" },
+  { key: "availability", label: "Verfügbarkeit", active: "bg-green-800 text-white" },
+  { key: "price", label: "Preis", active: "bg-sky-800 text-white" },
 ];
 
 const PAGE_SIZE = 8;
@@ -35,7 +35,7 @@ function meta(type: string) {
   if (RESTOCK.has(type))
     return { label: "Bestellbar", circle: "bg-green-500", labelClass: "text-green-700 dark:text-green-400", icon: <CheckIcon /> };
   if (SOLDOUT.has(type))
-    return { label: "Ausverkauft", circle: "bg-slate-400 dark:bg-slate-600", labelClass: "text-slate-500 dark:text-slate-400", icon: <XIcon /> };
+    return { label: "Ausverkauft", circle: "bg-slate-400 dark:bg-slate-600", labelClass: "text-slate-600 dark:text-slate-400", icon: <XIcon /> };
   return {
     label: "Preis geändert",
     circle: "bg-sky-500",
@@ -130,24 +130,24 @@ export function EventFeed({ events, now }: Readonly<{ events: FeedEvent[]; now: 
                           Neu
                         </span>
                       )}
-                      <span className="text-slate-400 dark:text-slate-500">
+                      <span className="text-slate-500 dark:text-slate-400">
                         bei{" "}
                         <span className="text-slate-600 dark:text-slate-300">
                           {event.retailerName}
                           {event.storeName ? ` ${event.storeName}` : ""}
                         </span>
                       </span>
-                      <span className="text-slate-300 dark:text-slate-600">·</span>
-                      <span className="text-slate-400 dark:text-slate-500">{formatDateTime(event.createdAt)}</span>
+                      <span className="text-slate-300 dark:text-slate-600" aria-hidden>·</span>
+                      <span className="text-slate-500 dark:text-slate-400">{formatDateTime(event.createdAt)}</span>
                       {duration != null && (
                         <>
-                          <span className="text-slate-300 dark:text-slate-600">·</span>
-                          <span className="text-slate-400 dark:text-slate-500">{formatDuration(duration)} verfügbar</span>
+                          <span className="text-slate-300 dark:text-slate-600" aria-hidden>·</span>
+                          <span className="text-slate-500 dark:text-slate-400">{formatDuration(duration)} verfügbar</span>
                         </>
                       )}
                     </div>
                     <p className="mt-0.5 truncate font-medium text-slate-900 dark:text-slate-100">{event.variantName}</p>
-                    <p className="text-[11px] text-slate-400 dark:text-slate-500">
+                    <p className="text-[11px] text-slate-500 dark:text-slate-400">
                       <RelativeTime timestamp={event.createdAt} initial={formatRelativeTime(event.createdAt, now)} />
                     </p>
                   </div>
@@ -161,7 +161,7 @@ export function EventFeed({ events, now }: Readonly<{ events: FeedEvent[]; now: 
                         fill="none"
                         stroke="currentColor"
                         strokeWidth="2"
-                        className="h-4 w-4 text-slate-400 dark:text-slate-500"
+                        className="h-4 w-4 text-slate-500 dark:text-slate-400"
                         aria-hidden
                       >
                         <path d="m9 18 6-6-6-6" strokeLinecap="round" strokeLinejoin="round" />
