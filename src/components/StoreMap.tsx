@@ -27,7 +27,7 @@ export function StoreMap({
   selected,
   onSelectedChange,
 }: Readonly<{ stores: NearbyStore[]; focus: MapFocus | null; selected?: string | null; onSelectedChange?: (key: string | null) => void }>) {
-  const containerRef = useRef<HTMLDivElement>(null);
+  const containerRef = useRef<HTMLElement>(null);
   const mapRef = useRef<LeafletMap | null>(null);
   const clusterRef = useRef<MarkerClusterGroup | null>(null);
   const markerByKeyRef = useRef<Map<string, CircleMarker>>(new Map());
@@ -137,9 +137,8 @@ export function StoreMap({
   }, [selected]);
 
   return (
-    <div
+    <section
       ref={containerRef}
-      role="region"
       aria-label="Karte der Filialen mit PortaSplit-Verfügbarkeit"
       className="z-0 h-96 w-full overflow-hidden rounded-xl border border-slate-200 shadow-sm dark:border-slate-800 dark:[&_.leaflet-tile]:brightness-[0.7] dark:[&_.leaflet-tile]:contrast-[1.05] dark:[&_.leaflet-tile]:hue-rotate-180 dark:[&_.leaflet-tile]:invert"
     />

@@ -18,7 +18,10 @@ function urlBase64ToUint8Array(base64: string): Uint8Array {
   return Uint8Array.from(raw, (c) => c.charCodeAt(0));
 }
 
-type PushState = "unsupported" | "idle" | "subscribed" | "denied" | "loading";
+// "checking" = initial async status probe (renders nothing, height reserved) so a
+// subscribed user never flashes the blue activate button on refresh. "busy" (below)
+// is the separate click-in-flight indicator shown on the button itself.
+type PushState = "checking" | "unsupported" | "idle" | "subscribed" | "denied";
 
 export function SubscribePanel() {
   const [variants, setVariants] = useState<string[]>(VARIANTS.map((v) => v.slug));
@@ -26,7 +29,8 @@ export function SubscribePanel() {
   const [zip, setZip] = useState("");
   const [radiusKm, setRadiusKm] = useState<number>(50);
 
-  const [pushState, setPushState] = useState<PushState>("loading");
+  const [pushState, setPushState] = useState<PushState>("checking");
+  const [pushBusy, setPushBusy] = useState(false); // enable/disable click in flight
   const [pushError, setPushError] = useState<string | null>(null);
 
   const [email, setEmail] = useState("");
@@ -64,7 +68,7 @@ export function SubscribePanel() {
       setPushError("Bitte mindestens eine Variante wählen.");
       return;
     }
-    setPushState("loading");
+    setPushBusy(true);
     try {
       const keyRes = await fetch("/api/push-key");
       if (!keyRes.ok) throw new Error("push not configured");
@@ -90,11 +94,13 @@ export function SubscribePanel() {
         setPushError("Hat nicht geklappt — bitte probier's nochmal.");
         console.error("push subscribe failed:", err);
       }
+    } finally {
+      setPushBusy(false);
     }
   }
 
   async function disablePush() {
-    setPushState("loading");
+    setPushBusy(true);
     try {
       const reg = await navigator.serviceWorker.ready;
       const sub = await reg.pushManager.getSubscription();
@@ -108,6 +114,7 @@ export function SubscribePanel() {
       }
     } finally {
       setPushState("idle");
+      setPushBusy(false);
     }
   }
 
@@ -192,34 +199,38 @@ export function SubscribePanel() {
       </details>
 
       <div className="mt-5">
-        {/* Primary path: Web Push */}
-        {pushState === "subscribed" ? (
-          <div className="text-sm">
-            <span className="font-medium text-green-700 dark:text-green-400">Push-Alarm ist aktiv — wir melden uns! ✓</span>
+        {/* Primary path: Web Push. Height reserved so the initial status probe
+            ("checking") doesn't shift the layout or flash the activate button. */}
+        <div className="flex min-h-11 items-center">
+          {pushState === "checking" ? null : pushState === "subscribed" ? (
+            <div className="text-sm">
+              <span className="font-medium text-green-700 dark:text-green-400">Push-Alarm ist aktiv — wir melden uns! ✓</span>
+              <button
+                onClick={disablePush}
+                disabled={pushBusy}
+                className="ml-3 text-slate-500 underline hover:text-slate-700 disabled:opacity-50 dark:text-slate-400 dark:hover:text-slate-200"
+              >
+                Deaktivieren
+              </button>
+            </div>
+          ) : pushState === "denied" ? (
+            <p className="text-sm text-slate-500 dark:text-slate-400">
+              Push ist in deinem Browser blockiert — erlaube Benachrichtigungen in den Website-Einstellungen.
+            </p>
+          ) : pushState === "unsupported" ? (
+            <p className="text-sm text-slate-500 dark:text-slate-400">
+              Dein Browser kann keine Push-Nachrichten — nimm einfach den E-Mail-Alarm unten.
+            </p>
+          ) : (
             <button
-              onClick={disablePush}
-              className="ml-3 text-slate-500 underline hover:text-slate-700 dark:text-slate-400 dark:hover:text-slate-200"
+              onClick={enablePush}
+              disabled={pushBusy}
+              className="w-full rounded-lg bg-sky-600 px-4 py-2.5 text-sm font-semibold text-white shadow-sm transition hover:bg-sky-500 disabled:opacity-50"
             >
-              Deaktivieren
+              {pushBusy ? "…" : "🔔 Push-Alarm aktivieren"}
             </button>
-          </div>
-        ) : pushState === "denied" ? (
-          <p className="text-sm text-slate-500 dark:text-slate-400">
-            Push ist in deinem Browser blockiert — erlaube Benachrichtigungen in den Website-Einstellungen.
-          </p>
-        ) : pushState === "unsupported" ? (
-          <p className="text-sm text-slate-500 dark:text-slate-400">
-            Dein Browser kann keine Push-Nachrichten — nimm einfach den E-Mail-Alarm unten.
-          </p>
-        ) : (
-          <button
-            onClick={enablePush}
-            disabled={pushState === "loading"}
-            className="w-full rounded-lg bg-sky-600 px-4 py-2.5 text-sm font-semibold text-white shadow-sm transition hover:bg-sky-500 disabled:opacity-50"
-          >
-            {pushState === "loading" ? "…" : "🔔 Push-Alarm aktivieren"}
-          </button>
-        )}
+          )}
+        </div>
         {pushError && <p className="mt-1 text-xs text-red-600 dark:text-red-400">{pushError}</p>}
         {isIos && !isStandalone && pushState !== "subscribed" && (
           <p className="mt-1.5 text-xs text-slate-500 dark:text-slate-400">
