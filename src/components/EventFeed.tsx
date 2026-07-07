@@ -105,7 +105,7 @@ export function EventFeed({ events, now }: Readonly<{ events: FeedEvent[]; now: 
         <p className="text-sm text-slate-500 dark:text-slate-400">Keine Einträge in dieser Kategorie.</p>
       ) : (
         <div className="relative">
-          <div className="absolute bottom-4 left-[13px] top-4 w-px bg-slate-200 dark:bg-slate-800" aria-hidden />
+          <div className="absolute bottom-4 left-3.25 top-4 w-px bg-slate-200 dark:bg-slate-800" aria-hidden />
           <ul className="space-y-2.5">
             {visible.map((event, i) => {
               const m = meta(event.type);

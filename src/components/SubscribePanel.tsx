@@ -131,7 +131,8 @@ export function SubscribePanel() {
     <div className="rounded-2xl border border-sky-200 bg-linear-to-b from-sky-50 to-white p-5 shadow-sm dark:border-sky-900/60 dark:from-sky-950/60 dark:to-slate-900">
       <h2 className="text-lg font-semibold text-slate-900 dark:text-slate-100">🔔 Keine PortaSplit mehr verpassen</h2>
       <p className="mt-1 text-sm text-slate-600 dark:text-slate-400">
-        Sobald sie wieder bestellbar ist, sagen wir dir Bescheid — meist innerhalb einer Minute, per Push oder E-Mail. Gratis und jederzeit abbestellbar.
+        Sobald sie wieder bestellbar ist, sagen wir dir Bescheid — meist innerhalb einer Minute, per Push oder E-Mail. Gratis und jederzeit
+        abbestellbar.
       </p>
 
       <p className="mt-4 mb-2 text-xs font-medium uppercase tracking-wide text-slate-500 dark:text-slate-400">Für welche Modelle?</p>
