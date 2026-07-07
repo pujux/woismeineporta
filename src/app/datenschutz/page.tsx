@@ -50,7 +50,7 @@ export default function Datenschutz() {
           <p>
             Beim E-Mail-Alarm speichern wir deine E-Mail-Adresse und Einstellungen erst nach Bestätigung (Double-Opt-in). Rechtsgrundlage:
             Einwilligung (Art. 6 Abs. 1 lit. a DSGVO). Jede E-Mail enthält einen Abmeldelink; mit der Abmeldung werden deine Daten gelöscht. Für den
-            Versand nutzen wir Resend (Resend, Inc., USA) als Auftragsverarbeiter; der Versand erfolgt auf Basis von EU-Standardvertragsklauseln.
+            Versand nutzen wir Brevo (Sendinblue SAS, Frankreich) als Auftragsverarbeiter; die Verarbeitung erfolgt innerhalb der EU.
           </p>
         </section>
 

@@ -1,21 +1,36 @@
 import crypto from "node:crypto";
-import { Resend } from "resend";
 import { EmailSubscriptionEntity, type AppDb } from "@/db";
 import { plzToLatLng } from "@/lib/geo";
 import { VARIANT_SLUGS } from "@/lib/variants";
 
 export type SendFn = (to: string, subject: string, html: string) => Promise<void>;
 
-let resend: Resend | undefined;
+/** Parse `"Name <email>"` (or a bare address) into Brevo's sender/replyTo shape. */
+function parseAddress(v: string): { name?: string; email: string } {
+  const m = v.match(/^\s*(.*?)\s*<([^>]+)>\s*$/);
+  return m ? { name: m[1] || undefined, email: m[2].trim() } : { email: v.trim() };
+}
+
+// Brevo (Sendinblue) transactional API — plain fetch, no SDK dependency (Node has
+// global fetch). Sender domain must be authenticated in Brevo (SPF/DKIM/DMARC).
 const defaultSend: SendFn = async (to, subject, html) => {
-  resend ??= new Resend(process.env.RESEND_API_KEY);
-  const { error } = await resend.emails.send({
-    from: process.env.EMAIL_FROM ?? "Wo is meine Porta? <onboarding@resend.dev>",
-    to,
-    subject,
-    html,
+  const apiKey = process.env.BREVO_API_KEY;
+  if (!apiKey) throw new Error("BREVO_API_KEY not set");
+  const res = await fetch("https://api.brevo.com/v3/smtp/email", {
+    method: "POST",
+    headers: { "api-key": apiKey, "content-type": "application/json", accept: "application/json" },
+    body: JSON.stringify({
+      sender: parseAddress(process.env.EMAIL_FROM ?? "Wo is meine Porta? <noreply@woismeineporta.pufler.dev>"),
+      to: [{ email: to }],
+      subject,
+      htmlContent: html,
+      ...(process.env.EMAIL_REPLY_TO ? { replyTo: parseAddress(process.env.EMAIL_REPLY_TO) } : {}),
+    }),
   });
-  if (error) throw new Error(`resend: ${error.message}`);
+  if (!res.ok) {
+    const body = await res.text().catch(() => "");
+    throw new Error(`brevo: HTTP ${res.status} ${body.slice(0, 200)}`);
+  }
 };
 
 function baseUrl(): string {
@@ -25,7 +40,7 @@ function baseUrl(): string {
 const EMAIL_RE = /^[^\s@]+@[^\s@]+\.[^\s@]{2,}$/;
 
 // Don't re-send a confirmation to the same address more than once per window —
-// blocks using the form to email-bomb a victim and limits Resend quota abuse.
+// blocks using the form to email-bomb a victim and limits provider quota abuse.
 const RESEND_THROTTLE_MS = 2 * 60_000;
 
 async function sendConfirmMail(send: SendFn, email: string, confirmToken: string): Promise<void> {

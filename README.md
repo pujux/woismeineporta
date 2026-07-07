@@ -8,13 +8,13 @@ oder E-Mail, sobald das Gerät wieder bestellbar ist — online **und** je Filia
 **Stack:** Next.js 16 (App Router, React Compiler, `output: standalone`), React 19,
 TypeScript 6, Tailwind v4, TypeORM + better-sqlite3, [impit](https://github.com/apify/impit)
 (Chrome-Fingerprint-Fetch für Cloudflare-geschützte Händler), Leaflet + OpenStreetMap,
-web-push, Resend. Läuft auf Node 24 als **ein einziger Docker-Container** (Dokploy), SQLite
+web-push, Brevo (EU-E-Mail). Läuft auf Node 24 als **ein einziger Docker-Container** (Dokploy), SQLite
 auf einem Volume — keine weiteren Dienste (kein Redis, keine DB, kein Headless-Browser).
 
 ## Features
 
 - **Online- und Filial-Verfügbarkeit** für beide Varianten, laufend geprüft.
-- **Sofort-Alarm** per **Web Push** (VAPID) oder **E-Mail** (Double-Opt-in via Resend),
+- **Sofort-Alarm** per **Web Push** (VAPID) oder **E-Mail** (Double-Opt-in via Brevo),
   variantengenau, optional zusätzlich für Filialen im PLZ-Umkreis. 60-Minuten-Cooldown
   gegen Alarm-Spam.
 - **Live ohne Client-Polling:** Server-Sent Events (`/api/live`) — der Client aktualisiert
@@ -83,7 +83,7 @@ curl -X POST -H "Authorization: Bearer $ADMIN_SECRET" http://localhost:3000/api/
 | `POLL_FAST_MS` / `POLL_SLOW_MS`                            | Intervalle (Default 30.000 / 180.000 ms)                                                        |
 | `ADMIN_SECRET`                                             | Bearer-Token für `POST /api/admin/check` (`openssl rand -hex 32`)                               |
 | `VAPID_PUBLIC_KEY` / `VAPID_PRIVATE_KEY` / `VAPID_SUBJECT` | Web Push (`npx web-push generate-vapid-keys`; Subject = `mailto:…`)                             |
-| `RESEND_API_KEY` / `EMAIL_FROM`                            | E-Mail-Alarme via [Resend](https://resend.com) (Domain verifizieren, Free-Tier: 100 Mails/Tag) |
+| `BREVO_API_KEY` / `EMAIL_FROM` / `EMAIL_REPLY_TO`          | E-Mail-Alarme via [Brevo](https://brevo.com) (EU; Domain verifizieren, Free-Tier: 300 Mails/Tag) |
 | `PUBLIC_BASE_URL`                                          | Öffentliche URL — für Canonical/OpenGraph, `sitemap.xml`/`robots.txt` und E-Mail-Links         |
 
 Fehlende Push-/E-Mail-/URL-Variablen sind kein Fehler: das jeweilige Feature bleibt
