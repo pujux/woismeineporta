@@ -81,10 +81,16 @@ angelegt. Vor Updates mit Schema-Änderungen die DB-Datei sichern (`/data/app.db
 ## Hinweise
 
 - **Kein Shop.** Die Seite verlinkt nur zu den Händlern; alle Angaben ohne Gewähr.
-- `src/app/impressum/page.tsx` enthält Platzhalter — vor dem öffentlichen Betrieb mit
-  echten Angaben (§5 ECG) befüllen; gleiches gilt für den Verantwortlichen in
-  `src/app/datenschutz/page.tsx`.
+- Impressum/Offenlegung (§25 MedienG) in `src/app/impressum/page.tsx`, Verantwortlicher
+  (DSGVO) in `src/app/datenschutz/page.tsx` — beim Fork mit eigenen Angaben ersetzen.
 - PLZ-Geodaten: [GeoNames](https://www.geonames.org/) (CC BY 4.0), Build via
   `pnpm tsx scripts/build-plz.ts`.
 - iOS-Push funktioniert erst, wenn die Seite zum Home-Bildschirm hinzugefügt wurde
   (PWA) — die UI weist darauf hin.
+
+## Lizenz
+
+MIT — siehe [LICENSE](LICENSE). © 2026 Julian Pufler.
+
+Kein offizielles Angebot von und keine Verbindung zu Midea, OBI, BAUHAUS, MediaMarkt oder
+Tepto. Alle Marken gehören ihren jeweiligen Inhabern.
