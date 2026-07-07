@@ -1,30 +1,14 @@
 import { NextResponse } from "next/server";
 import { getDb } from "@/db";
 import { createEmailSubscription } from "@/lib/notify/email";
+import { clientIp, createRateLimiter } from "@/lib/rate-limit";
 
-// Per-IP rate limit: 5 requests/minute. In-memory (single container); the map
-// is swept each call so idle IPs don't accumulate.
-const WINDOW_MS = 60_000;
-const MAX_PER_WINDOW = 5;
-const hits = new Map<string, number[]>();
-
-function rateLimited(ip: string, now = Date.now()): boolean {
-  for (const [key, times] of hits) {
-    const fresh = times.filter((t) => now - t < WINDOW_MS);
-    if (fresh.length) hits.set(key, fresh);
-    else hits.delete(key);
-  }
-  const recent = hits.get(ip) ?? [];
-  recent.push(now);
-  hits.set(ip, recent);
-  return recent.length > MAX_PER_WINDOW;
-}
+// Per-IP: 5 signups/minute (on top of the per-address anti-bombing throttle).
+const rateLimited = createRateLimiter(5, 60_000);
 
 export async function POST(request: Request) {
-  // Trustworthy only behind the reverse proxy (Traefik/Dokploy sets XFF).
-  const ip = request.headers.get("x-forwarded-for")?.split(",")[0]?.trim() ?? "local";
-  if (rateLimited(ip)) {
-    return NextResponse.json({ error: "zu viele Anfragen" }, { status: 429 });
+  if (rateLimited(clientIp(request))) {
+    return NextResponse.json({ error: "zu viele Anfragen" }, { status: 429, headers: { "Retry-After": "60" } });
   }
   let body: { email?: string; variantSlugs?: string[]; zip?: string; radiusKm?: number };
   try {

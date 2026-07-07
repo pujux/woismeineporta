@@ -2,6 +2,7 @@ import { NextResponse } from "next/server";
 import { getDb } from "@/db";
 import { plzToLatLng } from "@/lib/geo";
 import { findStoresNear, findStoresNearPoint, listAllStores } from "@/lib/queries";
+import { clientIp, createRateLimiter } from "@/lib/rate-limit";
 import { VARIANT_SLUGS } from "@/lib/variants";
 import type { VariantSlug } from "@/lib/retailers/types";
 
@@ -11,7 +12,13 @@ function inAustria(lat: number, lng: number): boolean {
   return lat >= AT_BBOX.latMin && lat <= AT_BBOX.latMax && lng >= AT_BBOX.lngMin && lng <= AT_BBOX.lngMax;
 }
 
+// Public, DB-hitting endpoint — generous per-IP cap to blunt abuse.
+const rateLimited = createRateLimiter(60, 60_000);
+
 export async function GET(request: Request) {
+  if (rateLimited(clientIp(request))) {
+    return NextResponse.json({ error: "zu viele Anfragen" }, { status: 429, headers: { "Retry-After": "60" } });
+  }
   const params = new URL(request.url).searchParams;
   const zip = params.get("zip") ?? "";
   const lat = params.has("lat") ? Number(params.get("lat")) : null;

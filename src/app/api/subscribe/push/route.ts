@@ -1,8 +1,14 @@
 import { NextResponse } from "next/server";
 import { getDb } from "@/db";
 import { deletePushSubscription, upsertPushSubscription, validatePushInput } from "@/lib/notify/push";
+import { clientIp, createRateLimiter } from "@/lib/rate-limit";
+
+const rateLimited = createRateLimiter(10, 60_000);
 
 export async function POST(request: Request) {
+  if (rateLimited(clientIp(request))) {
+    return NextResponse.json({ error: "zu viele Anfragen" }, { status: 429, headers: { "Retry-After": "60" } });
+  }
   let body: unknown;
   try {
     body = await request.json();
