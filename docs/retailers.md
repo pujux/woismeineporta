@@ -11,7 +11,7 @@ accessibility statements refer to plain Node `fetch` with browser-like headers
 | OBI | ✓ PDP JSON-LD | ✓ 79 stores, exact quantities | works |
 | MediaMarkt | ✓ PDP JSON-LD + `onlineStatus` | aggregate pickup signal only (per-store API blocked) | PDP works, GraphQL 403 (Akamai) |
 | Tepto | ✓ PDP JSON-LD (base variant only) | — | works |
-| BAUHAUS | ✓ (via impit) | — (needs OAuth token against api.bauhaus) | Cloudflare-blocked for plain fetch; **cleared with impit Chrome TLS impersonation** |
+| BAUHAUS | ✓ (via impit) | ✓ 23 AT Fachcentren, per-store availability | Cloudflare-blocked for plain fetch; **cleared with impit Chrome TLS impersonation** |
 | Hornbach | — | — | **dropped: does not sell the PortaSplit in Austria** (0 search results on hornbach.at) |
 
 ## OBI (obi.at)
@@ -44,7 +44,7 @@ accessibility statements refer to plain Node `fetch` with browser-like headers
 - PortaSplit PDP: `https://www.bauhaus.at/klimaanlagen/midea-klimasplitgeraet-portasplit-12000-btu/p/31934233` (Prod.Nr. `31934233`)
 - Behind Cloudflare bot management: plain `curl`/Node fetch → 403 challenge ("Sicherheitsprüfung"). **Solved with [impit](https://www.npmjs.com/package/impit)** (`{ browser: "chrome" }`), which impersonates Chrome's TLS + HTTP/2 fingerprint — returns the real PDP (verified 2026-07-06). The whole poller now fetches through impit (`src/lib/retailers/impit-fetch.ts`).
 - Online status/price parse from JSON-LD like the others (749 €, `OutOfStock` at capture time).
-- **Store-level ("Fachcentrum") data:** the PDP references `https://api.bauhaus/v1/product-stock/{cc}/products/{id}/warehouses/{wh}/stock` and a product-finder endpoint, but they require an OAuth bearer token (`401 Invalid access token` without one; the page holds only an `apikey`, the token is fetched at runtime). Not implemented — would need reverse-engineering the token exchange and is fragile. Adapter is online-status only.
+- **Store-level ("Fachcentrum") data — IMPLEMENTED (2026-07-06).** The PDP stock endpoint `https://api.bauhaus/v1/product-stock/at/products/{id}/warehouses/{wh}/stock` needs **no OAuth token** — the public Apigee `apiKey` embedded in the PDP (`apiKey:"…"`) plus an allowed `Origin`/`Referer: https://www.bauhaus.at` is sufficient. The earlier 401s were a missing `Origin` header, not a missing token. The adapter (`src/lib/retailers/bauhaus-stores.ts`) extracts the apiKey from the PDP it already fetches and sweeps all 23 AT Fachcentren (`src/data/bauhaus-stores.json`, exact coordinates); response shape `{ amount, availibility_level }` (sic). Degrades to online-only if the key is missing/rejected.
 - No Cool variant on bauhaus.at (only the 12.000 BTU model).
 
 ## Fixtures (`src/lib/retailers/__fixtures__/`)
