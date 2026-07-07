@@ -113,11 +113,11 @@ Das Produktions-Image ist verifiziert (Node 24, nativer better-sqlite3-Build,
 TypeORM läuft mit `synchronize: true`: neue Spalten/Tabellen werden beim Start automatisch
 angelegt. Vor Updates mit Schema-Änderungen die DB-Datei sichern (`/data/app.db` kopieren).
 
-### MediaMarkt hinter Cloudflare WARP (optional, experimentell)
+### Retailer-Fetches hinter Cloudflare WARP (optional, experimentell)
 
-MediaMarkts Cloudflare blockt Rechenzentrums-IPs (403), OBI/BAUHAUS/Tepto nicht. Um **nur
-MediaMarkt** über eine „saubere" IP zu leiten, läuft ein Cloudflare-WARP-Proxy als Sidecar,
-und `MEDIAMARKT_PROXY_URL` zeigt darauf — der restliche Traffic bleibt direkt.
+Wird die Server-IP von Cloudflare geflaggt, liefern **BAUHAUS und MediaMarkt 403** (OBI/Tepto
+sind nicht Cloudflare-geschützt). `RETAILER_PROXY_URL` leitet dann **alle** Retailer-Fetches
+über einen Proxy mit sauberer Egress-IP — z. B. einen Cloudflare-WARP-Sidecar.
 
 **In Cloudflare:** nichts. Free WARP registriert sich selbst; kein Account, kein Zero Trust,
 keine DNS-Änderung nötig (dein Cloudflare-DNS-Account ist davon unberührt).
@@ -127,14 +127,14 @@ keine DNS-Änderung nötig (dein Cloudflare-DNS-Account ist davon unberührt).
 1. Neuen **Compose**-Service anlegen, Repo + Branch `test`, Compose-Datei
    `docker-compose.warp.yml` (App + `caomingjun/warp`-Sidecar, GOST-Proxy auf `:1080`).
 2. Env-Vars (`VAPID_*`, `BREVO_API_KEY`, `EMAIL_FROM`, `ADMIN_SECRET`, `PUBLIC_BASE_URL`) im
-   Dokploy-UI setzen; `MEDIAMARKT_PROXY_URL=socks5://warp:1080` ist in der Compose-Datei schon
+   Dokploy-UI setzen; `RETAILER_PROXY_URL=socks5://warp:1080` ist in der Compose-Datei schon
    gesetzt.
 3. Domain im Dokploy-UI auf den `app`-Service (Port 3000) legen, HTTPS an.
-4. Deploy, dann Logs prüfen: verschwindet `errors.mediamarkt`, klappt WARP.
+4. Deploy, dann Logs prüfen: verschwinden die `errors` für bauhaus/mediamarkt, klappt WARP.
 
-Hinweis: WARP nutzt Cloudflare-eigene Egress-IPs — ob deren IP von MediaMarkts Bot-Abwehr
-akzeptiert wird, ist nicht garantiert. Schlägt es fehl, ist MediaMarkt (reines Online-Signal)
-verzichtbar; die Kern-Filialdaten liefern OBI und BAUHAUS.
+Hinweis: WARP nutzt Cloudflare-eigene Egress-IPs — ob deren IP von der jeweiligen Bot-Abwehr
+akzeptiert wird, ist nicht garantiert. Klappt es nicht, hilft nur ein Residential-Proxy
+(kostenpflichtig) oder — bei MediaMarkt (reines Online-Signal) — Verzicht.
 
 ## Hinweise
 

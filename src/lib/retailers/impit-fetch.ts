@@ -18,5 +18,7 @@ export function makeImpitFetch(proxyUrl?: string): typeof fetch {
   }) as typeof fetch;
 }
 
-/** Default impersonating fetch (no proxy) — the poller's fetchFn for all adapters. */
-export const impitFetch = makeImpitFetch();
+// Default impersonating fetch used by the poller for all adapters. Routes through
+// RETAILER_PROXY_URL when set (e.g. a Cloudflare WARP proxy), so a flagged server IP
+// can be swapped for a clean egress IP across every retailer at once.
+export const impitFetch = makeImpitFetch(process.env.RETAILER_PROXY_URL);
