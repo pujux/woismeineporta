@@ -1,6 +1,12 @@
 import { politeFetch } from "./fetch";
+import { makeImpitFetch } from "./impit-fetch";
 import { parseProductLd } from "./jsonld";
 import type { OnlineOffer, RetailerAdapter, StockStatus, VariantSlug } from "./types";
+
+// MediaMarkt's Cloudflare blocks datacenter IPs (403), unlike the other retailers.
+// If MEDIAMARKT_PROXY_URL is set (e.g. a Cloudflare WARP SOCKS5 proxy), route ONLY
+// MediaMarkt's fetches through it for a clean egress IP; everything else stays direct.
+const proxiedFetch = process.env.MEDIAMARKT_PROXY_URL ? makeImpitFetch(process.env.MEDIAMARKT_PROXY_URL) : null;
 
 const PRODUCTS: Array<{ variant: VariantSlug; productId: string; url: string }> = [
   {
@@ -48,9 +54,10 @@ export const mediamarktAdapter: RetailerAdapter = {
   slug: "mediamarkt",
   tier: "slow",
   async check(fetchFn) {
+    const doFetch = proxiedFetch ?? fetchFn;
     const offers: OnlineOffer[] = [];
     for (const product of PRODUCTS) {
-      const res = await politeFetch(product.url, { headers: { Accept: "text/html" } }, fetchFn);
+      const res = await politeFetch(product.url, { headers: { Accept: "text/html" } }, doFetch);
       const html = await res.text();
       const ld = parseProductLd(html);
       if (!ld) throw new Error(`mediamarkt: no product JSON-LD for ${product.productId}`);

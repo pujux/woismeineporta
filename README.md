@@ -113,6 +113,22 @@ Das Produktions-Image ist verifiziert (Node 24, nativer better-sqlite3-Build,
 TypeORM läuft mit `synchronize: true`: neue Spalten/Tabellen werden beim Start automatisch
 angelegt. Vor Updates mit Schema-Änderungen die DB-Datei sichern (`/data/app.db` kopieren).
 
+### MediaMarkt hinter Cloudflare WARP (optional, experimentell)
+
+MediaMarkts Cloudflare blockt Rechenzentrums-IPs (403), OBI/BAUHAUS/Tepto nicht. Um **nur
+MediaMarkt** über eine „saubere" IP zu leiten, kann man einen Cloudflare-WARP-Proxy als
+Sidecar betreiben und `MEDIAMARKT_PROXY_URL` darauf zeigen lassen — der restliche Traffic
+bleibt direkt.
+
+1. WARP-Proxy-Container danebenstellen (z. B. Image `caomingjun/warp`), der einen **SOCKS5**-
+   Proxy auf `:40000` bereitstellt (in Dokploy als zweiter Service / via Compose).
+2. `MEDIAMARKT_PROXY_URL=socks5://<warp-service>:40000` in den App-Env-Vars setzen.
+3. Deploy, dann Logs prüfen: verschwindet der `errors.mediamarkt`-Eintrag, klappt WARP.
+
+Hinweis: WARP nutzt Cloudflare-eigene Egress-IPs — ob deren IP von MediaMarkts Bot-Abwehr
+akzeptiert wird, ist nicht garantiert. Schlägt es fehl, ist MediaMarkt (reines Online-Signal)
+verzichtbar; die Kern-Filialdaten liefern OBI und BAUHAUS.
+
 ## Hinweise
 
 - **Kein Shop.** Die Seite verlinkt nur zu den Händlern; alle Angaben ohne Gewähr.
