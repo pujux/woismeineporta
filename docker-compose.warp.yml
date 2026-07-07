@@ -1,0 +1,44 @@
+# Optional deployment: the app + a Cloudflare WARP sidecar, so ONLY MediaMarkt's
+# fetches egress through WARP's IP (its Cloudflare blocks datacenter IPs; the other
+# retailers stay on the direct path). Use this as a Dokploy "Compose" service.
+#
+# Secrets (VAPID_*, BREVO_*, ADMIN_SECRET, PUBLIC_BASE_URL) are set in the Dokploy
+# UI env — not committed here. Attach your domain to the `app` service (port 3000)
+# in Dokploy's Domains tab.
+
+services:
+  app:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    restart: unless-stopped
+    environment:
+      NODE_ENV: production
+      HOSTNAME: 0.0.0.0
+      PORT: "3000"
+      ENABLE_POLLER: "1"
+      DATABASE_PATH: /data/app.db
+      # Route only MediaMarkt through the WARP sidecar (GOST serves SOCKS5 on :1080).
+      MEDIAMARKT_PROXY_URL: socks5://warp:1080
+    volumes:
+      - porta-data:/data
+    depends_on:
+      - warp
+
+  warp:
+    image: caomingjun/warp
+    restart: unless-stopped
+    cap_add:
+      - NET_ADMIN
+    sysctls:
+      net.ipv6.conf.all.disable_ipv6: "0"
+      net.ipv4.conf.all.src_valid_mark: "1"
+    environment:
+      WARP_SLEEP: "2"
+      # WARP_LICENSE_KEY: ""   # optional: a WARP+ key for potentially better IPs
+    volumes:
+      - warp-data:/var/lib/cloudflare-warp
+
+volumes:
+  porta-data:
+  warp-data:

@@ -116,14 +116,21 @@ angelegt. Vor Updates mit Schema-Änderungen die DB-Datei sichern (`/data/app.db
 ### MediaMarkt hinter Cloudflare WARP (optional, experimentell)
 
 MediaMarkts Cloudflare blockt Rechenzentrums-IPs (403), OBI/BAUHAUS/Tepto nicht. Um **nur
-MediaMarkt** über eine „saubere" IP zu leiten, kann man einen Cloudflare-WARP-Proxy als
-Sidecar betreiben und `MEDIAMARKT_PROXY_URL` darauf zeigen lassen — der restliche Traffic
-bleibt direkt.
+MediaMarkt** über eine „saubere" IP zu leiten, läuft ein Cloudflare-WARP-Proxy als Sidecar,
+und `MEDIAMARKT_PROXY_URL` zeigt darauf — der restliche Traffic bleibt direkt.
 
-1. WARP-Proxy-Container danebenstellen (z. B. Image `caomingjun/warp`), der einen **SOCKS5**-
-   Proxy auf `:40000` bereitstellt (in Dokploy als zweiter Service / via Compose).
-2. `MEDIAMARKT_PROXY_URL=socks5://<warp-service>:40000` in den App-Env-Vars setzen.
-3. Deploy, dann Logs prüfen: verschwindet der `errors.mediamarkt`-Eintrag, klappt WARP.
+**In Cloudflare:** nichts. Free WARP registriert sich selbst; kein Account, kein Zero Trust,
+keine DNS-Änderung nötig (dein Cloudflare-DNS-Account ist davon unberührt).
+
+**In Dokploy** (als **Compose**-Service, am besten separat zum Prod-Deploy zum Testen):
+
+1. Neuen **Compose**-Service anlegen, Repo + Branch `test`, Compose-Datei
+   `docker-compose.warp.yml` (App + `caomingjun/warp`-Sidecar, GOST-Proxy auf `:1080`).
+2. Env-Vars (`VAPID_*`, `BREVO_API_KEY`, `EMAIL_FROM`, `ADMIN_SECRET`, `PUBLIC_BASE_URL`) im
+   Dokploy-UI setzen; `MEDIAMARKT_PROXY_URL=socks5://warp:1080` ist in der Compose-Datei schon
+   gesetzt.
+3. Domain im Dokploy-UI auf den `app`-Service (Port 3000) legen, HTTPS an.
+4. Deploy, dann Logs prüfen: verschwindet `errors.mediamarkt`, klappt WARP.
 
 Hinweis: WARP nutzt Cloudflare-eigene Egress-IPs — ob deren IP von MediaMarkts Bot-Abwehr
 akzeptiert wird, ist nicht garantiert. Schlägt es fehl, ist MediaMarkt (reines Online-Signal)
