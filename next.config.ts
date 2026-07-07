@@ -3,6 +3,7 @@ import type { NextConfig } from "next";
 const nextConfig: NextConfig = {
   reactCompiler: true,
   output: "standalone",
+  poweredByHeader: false, // don't advertise Next.js via X-Powered-By
   serverExternalPackages: ["better-sqlite3", "typeorm", "impit"],
   async headers() {
     return [

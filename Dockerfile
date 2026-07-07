@@ -1,5 +1,5 @@
 # ---- deps + build ----
-FROM node:22-alpine AS build
+FROM node:24-alpine AS build
 WORKDIR /app
 # better-sqlite3 native build toolchain
 RUN apk add --no-cache python3 make g++
@@ -10,7 +10,7 @@ COPY . .
 RUN pnpm build
 
 # ---- runtime ----
-FROM node:22-alpine AS runtime
+FROM node:24-alpine AS runtime
 WORKDIR /app
 ENV NODE_ENV=production \
     PORT=3000 \
