@@ -86,6 +86,8 @@ export function EventFeed({ events, now }: Readonly<{ events: FeedEvent[]; now: 
         {FILTERS.map((f) => (
           <button
             key={f.key}
+            type="button"
+            aria-pressed={filter === f.key}
             onClick={() => {
               setFilter(f.key);
               setShown(PAGE_SIZE);
@@ -193,6 +195,7 @@ export function EventFeed({ events, now }: Readonly<{ events: FeedEvent[]; now: 
       {shown < filtered.length && (
         <div className="mt-4 text-center">
           <button
+            type="button"
             onClick={() => setShown((s) => s + PAGE_SIZE)}
             className="rounded-lg border border-slate-300 px-4 py-2 text-sm font-medium text-slate-600 transition hover:bg-slate-100 dark:border-slate-700 dark:text-slate-300 dark:hover:bg-slate-800"
           >

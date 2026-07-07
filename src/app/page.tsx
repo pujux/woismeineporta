@@ -67,11 +67,13 @@ export default async function Home() {
                 Noch keine Daten — erster Check läuft.
               </p>
             ) : (
-              <div className="grid gap-2.5 sm:grid-cols-2">
+              <ul className="grid gap-2.5 sm:grid-cols-2">
                 {offers.map((offer) => (
-                  <StatusCard key={offer.retailerSlug} offer={offer} now={now} />
+                  <li key={offer.retailerSlug}>
+                    <StatusCard offer={offer} now={now} />
+                  </li>
                 ))}
-              </div>
+              </ul>
             )}
           </div>
         ))}

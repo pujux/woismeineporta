@@ -139,8 +139,9 @@ export function StoreMap({
   return (
     <div
       ref={containerRef}
-      className="z-0 h-96 w-full overflow-hidden rounded-xl border border-slate-200 shadow-sm dark:border-slate-800 dark:[&_.leaflet-tile]:brightness-[0.7] dark:[&_.leaflet-tile]:contrast-[1.05] dark:[&_.leaflet-tile]:hue-rotate-180 dark:[&_.leaflet-tile]:invert"
+      role="region"
       aria-label="Karte der Filialen mit PortaSplit-Verfügbarkeit"
+      className="z-0 h-96 w-full overflow-hidden rounded-xl border border-slate-200 shadow-sm dark:border-slate-800 dark:[&_.leaflet-tile]:brightness-[0.7] dark:[&_.leaflet-tile]:contrast-[1.05] dark:[&_.leaflet-tile]:hue-rotate-180 dark:[&_.leaflet-tile]:invert"
     />
   );
 }

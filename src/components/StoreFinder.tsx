@@ -185,6 +185,8 @@ export function StoreFinder() {
               {[null, ...retailerNames].map((r) => (
                 <button
                   key={r ?? "all"}
+                  type="button"
+                  aria-pressed={retailer === r}
                   onClick={() => {
                     setRetailer(r);
                     setExpanded(false);

@@ -37,7 +37,7 @@ export function StatusCard({ offer, now }: Readonly<{ offer: VariantStatus["offe
       href={offer.url}
       target="_blank"
       rel="nofollow noopener"
-      className="flex items-center justify-between gap-3 rounded-xl border border-slate-200 bg-white px-4 py-3 shadow-sm transition-[border-color,box-shadow] hover:border-sky-300 hover:shadow-md dark:border-slate-800 dark:bg-slate-900 dark:hover:border-sky-700"
+      className="flex h-full items-center justify-between gap-3 rounded-xl border border-slate-200 bg-white px-4 py-3 shadow-sm transition-[border-color,box-shadow] hover:border-sky-300 hover:shadow-md dark:border-slate-800 dark:bg-slate-900 dark:hover:border-sky-700"
     >
       <div className="min-w-0 flex-1">
         <span className={`inline-flex items-center gap-1.5 rounded-full px-2 py-0.5 text-xs font-semibold ring-1 ring-inset ${meta.chip}`}>

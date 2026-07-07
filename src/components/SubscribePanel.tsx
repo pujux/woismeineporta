@@ -150,45 +150,45 @@ export function SubscribePanel() {
         ))}
       </div>
 
-      <details className="mt-3" open={storeAlert}>
-        <summary
-          className="cursor-pointer text-sm text-sky-700 hover:text-sky-800 dark:text-sky-400 dark:hover:text-sky-300"
-          onClick={(e) => {
-            e.preventDefault();
-            setStoreAlert((s) => !s);
-          }}
-        >
-          {storeAlert ? "▾" : "▸"} Zusätzlich Filialen in der Nähe (optional)
+      <details className="group mt-3" onToggle={(e) => setStoreAlert(e.currentTarget.open)}>
+        <summary className="flex cursor-pointer list-none items-center gap-1.5 text-sm text-sky-700 hover:text-sky-800 dark:text-sky-400 dark:hover:text-sky-300 [&::-webkit-details-marker]:hidden">
+          <svg
+            viewBox="0 0 24 24"
+            fill="none"
+            stroke="currentColor"
+            strokeWidth="2"
+            className="h-3.5 w-3.5 shrink-0 transition group-open:rotate-90"
+            aria-hidden
+          >
+            <path d="m9 18 6-6-6-6" strokeLinecap="round" strokeLinejoin="round" />
+          </svg>
+          Zusätzlich Filialen in der Nähe (optional)
         </summary>
-        {storeAlert && (
-          <>
-            <p className="mt-2 text-xs text-slate-500 dark:text-slate-400">
-              Online-Restocks bekommst du ohnehin. Mit einer PLZ melden wir dir <em> zusätzlich</em>, sobald ein Markt im Umkreis eine lagernd hat.
-            </p>
-            <div className="mt-2 flex items-center gap-2">
-              <input
-                value={zip}
-                onChange={(e) => setZip(e.target.value.replace(/\D/g, "").slice(0, 4))}
-                inputMode="numeric"
-                placeholder="PLZ"
-                aria-label="PLZ für Filial-Alarm"
-                className={`w-24 ${INPUT_CLASSES}`}
-              />
-              <select
-                value={radiusKm}
-                onChange={(e) => setRadiusKm(Number(e.target.value))}
-                aria-label="Radius für Filial-Alarm"
-                className={`${INPUT_CLASSES} select-chevron appearance-none pr-9`}
-              >
-                {RADII.map((r) => (
-                  <option key={r} value={r}>
-                    {r} km
-                  </option>
-                ))}
-              </select>
-            </div>
-          </>
-        )}
+        <p className="mt-2 text-xs text-slate-500 dark:text-slate-400">
+          Online-Restocks bekommst du ohnehin. Mit einer PLZ melden wir dir <em>zusätzlich</em>, sobald ein Markt im Umkreis eine lagernd hat.
+        </p>
+        <div className="mt-2 flex items-center gap-2">
+          <input
+            value={zip}
+            onChange={(e) => setZip(e.target.value.replace(/\D/g, "").slice(0, 4))}
+            inputMode="numeric"
+            placeholder="PLZ"
+            aria-label="PLZ für Filial-Alarm"
+            className={`w-24 ${INPUT_CLASSES}`}
+          />
+          <select
+            value={radiusKm}
+            onChange={(e) => setRadiusKm(Number(e.target.value))}
+            aria-label="Radius für Filial-Alarm"
+            className={`${INPUT_CLASSES} select-chevron appearance-none pr-9`}
+          >
+            {RADII.map((r) => (
+              <option key={r} value={r}>
+                {r} km
+              </option>
+            ))}
+          </select>
+        </div>
       </details>
 
       <div className="mt-5">
