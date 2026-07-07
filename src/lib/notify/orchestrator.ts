@@ -1,3 +1,4 @@
+import { In, MoreThan } from "typeorm";
 import { EmailSubscriptionEntity, NotificationLogEntity, OfferEntity, PushSubscriptionEntity, RetailerEntity, StoreEntity, type AppDb } from "@/db";
 import type { StockEvent } from "@/lib/diff";
 import { formatPrice } from "@/lib/format";
@@ -7,6 +8,35 @@ import { sendAlertEmail } from "./email";
 import { sendPush, type PushPayload } from "./push";
 
 const COOLDOWN_MS = 60 * 60_000;
+// A restock fans out to every matching subscriber; sending serially would make
+// the last person wait for all the sends before them. Fire them in bounded
+// parallel so latency is roughly one send, not N.
+const SEND_CONCURRENCY = 20;
+
+async function mapLimit<T, R>(items: T[], limit: number, fn: (item: T) => Promise<R>): Promise<R[]> {
+  const results = new Array<R>(items.length);
+  let cursor = 0;
+  async function worker() {
+    while (cursor < items.length) {
+      const idx = cursor++;
+      results[idx] = await fn(items[idx]);
+    }
+  }
+  await Promise.all(Array.from({ length: Math.min(limit, items.length) }, worker));
+  return results;
+}
+
+/** One query per (channel, dedupeKey): which of these subscribers are still cooling down. */
+async function subsUnderCooldown(db: AppDb, channel: "push" | "email", dedupeKey: string, subIds: number[], now: number): Promise<Set<number>> {
+  if (subIds.length === 0) return new Set();
+  const rows = await db.getRepository(NotificationLogEntity).findBy({
+    channel,
+    dedupeKey,
+    subscriptionId: In(subIds),
+    sentAt: MoreThan(now - COOLDOWN_MS),
+  });
+  return new Set(rows.map((r) => r.subscriptionId));
+}
 
 interface Deps {
   push?: typeof sendPush;
@@ -71,19 +101,6 @@ function matches(message: Message, sub: { variantSlugs: string; zip: string | nu
   return distanceKm(home.lat, home.lng, message.storeGeo.lat, message.storeGeo.lng) <= sub.radiusKm;
 }
 
-async function underCooldown(db: AppDb, channel: "push" | "email", subscriptionId: number, dedupeKey: string, now: number): Promise<boolean> {
-  const recent = await db
-    .getRepository(NotificationLogEntity)
-    .createQueryBuilder("nl")
-    .where("nl.channel = :channel AND nl.subscription_id = :subscriptionId", { channel, subscriptionId })
-    .andWhere("nl.dedupe_key = :dedupeKey AND nl.sent_at > :cutoff", {
-      dedupeKey,
-      cutoff: now - COOLDOWN_MS,
-    })
-    .getOne();
-  return recent !== null;
-}
-
 export async function notifyEvents(db: AppDb, events: StockEvent[], now: number, deps: Deps = {}): Promise<{ pushed: number; emailed: number }> {
   const doPush = deps.push ?? sendPush;
   const doEmail = deps.email ?? sendAlertEmail;
@@ -96,30 +113,37 @@ export async function notifyEvents(db: AppDb, events: StockEvent[], now: number,
     const message = await buildMessage(db, event);
     if (!message) continue;
 
-    for (const sub of await db.getRepository(PushSubscriptionEntity).find()) {
-      if (!matches(message, sub)) continue;
-      if (await underCooldown(db, "push", sub.id, message.dedupeKey, now)) continue;
-      const result = await doPush(db, sub.id, {
-        title: message.title,
-        body: message.body,
-        url: message.url,
-      });
-      if (result === "sent") {
-        pushed++;
-        await log.insert({ channel: "push", subscriptionId: sub.id, dedupeKey: message.dedupeKey, sentAt: now });
-      }
-    }
+    // Push: pick matching subs, drop those cooling down (one query), send in parallel.
+    const pushSubs = (await db.getRepository(PushSubscriptionEntity).find()).filter((s) => matches(message, s));
+    const pushCooled = await subsUnderCooldown(db, "push", message.dedupeKey, pushSubs.map((s) => s.id), now);
+    const pushSent = (
+      await mapLimit(
+        pushSubs.filter((s) => !pushCooled.has(s.id)),
+        SEND_CONCURRENCY,
+        async (sub) => ({ id: sub.id, ok: (await doPush(db, sub.id, { title: message.title, body: message.body, url: message.url })) === "sent" }),
+      )
+    ).filter((r) => r.ok);
+    pushed += pushSent.length;
 
-    for (const sub of await db.getRepository(EmailSubscriptionEntity).findBy({ confirmed: true })) {
-      if (!matches(message, sub)) continue;
-      if (await underCooldown(db, "email", sub.id, message.dedupeKey, now)) continue;
-      const html = `<p>${message.body}.</p><p><a href="${message.url}">Direkt zum Angebot</a></p>`;
-      const result = await doEmail(db, sub.id, message.title, html);
-      if (result === "sent") {
-        emailed++;
-        await log.insert({ channel: "email", subscriptionId: sub.id, dedupeKey: message.dedupeKey, sentAt: now });
-      }
-    }
+    // Email: confirmed subscribers only, same batched-cooldown + parallel-send shape.
+    const emailSubs = (await db.getRepository(EmailSubscriptionEntity).findBy({ confirmed: true })).filter((s) => matches(message, s));
+    const emailCooled = await subsUnderCooldown(db, "email", message.dedupeKey, emailSubs.map((s) => s.id), now);
+    const html = `<p>${message.body}.</p><p><a href="${message.url}">Direkt zum Angebot</a></p>`;
+    const emailSent = (
+      await mapLimit(
+        emailSubs.filter((s) => !emailCooled.has(s.id)),
+        SEND_CONCURRENCY,
+        async (sub) => ({ id: sub.id, ok: (await doEmail(db, sub.id, message.title, html)) === "sent" }),
+      )
+    ).filter((r) => r.ok);
+    emailed += emailSent.length;
+
+    // One bulk insert per channel instead of one per subscriber.
+    const rows = [
+      ...pushSent.map((r) => ({ channel: "push" as const, subscriptionId: r.id, dedupeKey: message.dedupeKey, sentAt: now })),
+      ...emailSent.map((r) => ({ channel: "email" as const, subscriptionId: r.id, dedupeKey: message.dedupeKey, sentAt: now })),
+    ];
+    if (rows.length) await log.insert(rows);
   }
 
   return { pushed, emailed };

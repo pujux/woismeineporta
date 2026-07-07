@@ -1,5 +1,6 @@
 import { getDb } from "@/db";
 import { getRecentEvents, getVariantStatuses } from "@/lib/queries";
+import { singleflight } from "@/lib/singleflight";
 import { formatPrice } from "@/lib/format";
 import { EventFeed } from "@/components/EventFeed";
 import { LiveRefresh } from "@/components/LiveRefresh";
@@ -11,7 +12,13 @@ export const dynamic = "force-dynamic";
 
 export default async function Home() {
   const db = await getDb();
-  const [statuses, events] = await Promise.all([getVariantStatuses(db), getRecentEvents(db, 60)]);
+  const [statuses, events] = await Promise.all([
+    singleflight("variant-statuses", () => getVariantStatuses(db)),
+    singleflight("recent-events:60", () => getRecentEvents(db, 60)),
+  ]);
+  // Dynamic (force-dynamic) server component: renders once per request, so a
+  // fresh timestamp here is intended — this is the "now" for initial relative times.
+  // eslint-disable-next-line react-hooks/purity
   const now = Date.now();
   const anyInStock = statuses.some((s) => s.offers.some((o) => o.status === "in_stock"));
 
@@ -20,7 +27,7 @@ export default async function Home() {
       <LiveRefresh />
       <header className="pt-12 pb-2">
         <div className="mb-4 inline-flex items-center gap-2 rounded-full border border-slate-200 bg-white px-3 py-1 text-xs font-medium text-slate-600 shadow-sm dark:border-slate-800 dark:bg-slate-900 dark:text-slate-300">
-          <span className="h-2 w-2 animate-pulse-dot rounded-full bg-sky-500" aria-hidden /> Live — alle 30 Sekunden geprüft
+          <span className="h-2 w-2 animate-pulse-dot rounded-full bg-sky-500" aria-hidden /> Live — immer aktuell
         </div>
         <h1 className="text-4xl font-bold tracking-tight sm:text-5xl">
           Wo is meine{" "}

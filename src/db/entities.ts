@@ -240,10 +240,12 @@ export const NotificationLogEntity = new EntitySchema<NotificationLogRow>({
     sentAt: { type: "integer", name: "sent_at" },
   },
   indices: [
-    {
-      name: "nl_dedupe",
-      columns: ["channel", "subscriptionId", "dedupeKey", "sentAt"],
-    },
+    // Serves the batched cooldown lookup (channel + dedupeKey equality, sentAt range;
+    // subscriptionId is filtered with IN over the equality prefix).
+    { name: "nl_dedupe", columns: ["channel", "dedupeKey", "sentAt"] },
+    // Serves pruneOldData's `DELETE WHERE sent_at < cutoff`, which the composite
+    // index above (led by channel) can't use.
+    { name: "nl_sent_at", columns: ["sentAt"] },
   ],
 });
 
