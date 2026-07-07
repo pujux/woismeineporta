@@ -2,9 +2,10 @@
 
 import { useState } from "react";
 import type { NearbyStore } from "@/lib/queries";
-import { StoreMap, type MapFocus } from "./StoreMap";
+import { StoreMap, storeKey, type MapFocus } from "./StoreMap";
 
 const RADII = [10, 25, 50, 100] as const;
+const LIST_LIMIT = 5; // stores shown before "show more"
 
 const INPUT_CLASSES =
   "rounded-lg border border-slate-300 bg-white px-3 py-2 text-sm text-slate-900 placeholder:text-slate-400 focus:border-sky-500 focus:outline-none focus:ring-2 focus:ring-sky-500/30 dark:border-slate-700 dark:bg-slate-900 dark:text-slate-100 dark:placeholder:text-slate-500";
@@ -16,8 +17,11 @@ export function StoreFinder() {
   const [focus, setFocus] = useState<MapFocus | null>(null);
   const [mode, setMode] = useState<"none" | "search" | "all">("none");
   const [retailer, setRetailer] = useState<string | null>(null); // null = alle
-  const [loading, setLoading] = useState(false);
+  const [expanded, setExpanded] = useState(false); // list shows LIST_LIMIT until expanded
+  const [selected, setSelected] = useState<string | null>(null); // store key focused on the map
+  const [busy, setBusy] = useState<null | "search" | "geo" | "all">(null);
   const [error, setError] = useState<string | null>(null);
+  const loading = busy !== null;
 
   async function search(e: React.SyntheticEvent) {
     e.preventDefault();
@@ -25,7 +29,7 @@ export function StoreFinder() {
       setError("Bitte eine 4-stellige PLZ eingeben.");
       return;
     }
-    setLoading(true);
+    setBusy("search");
     setError(null);
     try {
       const res = await fetch(`/api/stores?zip=${zip}&radius=${radius}`);
@@ -34,11 +38,13 @@ export function StoreFinder() {
       setStores(d.stores);
       setFocus(d.center ? { center: d.center, radiusKm: d.radiusKm } : null);
       setRetailer(null);
+      setExpanded(false);
+      setSelected(null);
       setMode("search");
     } catch {
       setError("Suche fehlgeschlagen — bitte später nochmal probieren.");
     } finally {
-      setLoading(false);
+      setBusy(null);
     }
   }
 
@@ -47,7 +53,7 @@ export function StoreFinder() {
       setError("Dein Browser unterstützt keine Standortbestimmung.");
       return;
     }
-    setLoading(true);
+    setBusy("geo");
     setError(null);
     navigator.geolocation.getCurrentPosition(
       async (pos) => {
@@ -65,11 +71,11 @@ export function StoreFinder() {
           setRetailer(null);
           setMode("search");
         } finally {
-          setLoading(false);
+          setBusy(null);
         }
       },
       (err) => {
-        setLoading(false);
+        setBusy(null);
         setError(
           err.code === err.PERMISSION_DENIED
             ? "Standortzugriff wurde verweigert — gib stattdessen eine PLZ ein."
@@ -81,7 +87,7 @@ export function StoreFinder() {
   }
 
   async function showAll() {
-    setLoading(true);
+    setBusy("all");
     setError(null);
     try {
       const d = await fetch("/api/stores").then((r) => r.json());
@@ -90,13 +96,19 @@ export function StoreFinder() {
       setRetailer(null);
       setMode("all");
     } finally {
-      setLoading(false);
+      setBusy(null);
     }
   }
 
   const retailerNames = [...new Set(stores.map((s) => s.retailerName))].sort();
   const visible = retailer ? stores.filter((s) => s.retailerName === retailer) : stores;
   const inStockCount = visible.filter((s) => s.inStock).length;
+
+  // Derived, not synced: show the full list when the user expanded it OR when a
+  // store selected on the map lives past the collapsed cut-off (so its row shows).
+  const selectedIdx = selected ? visible.findIndex((s) => storeKey(s) === selected) : -1;
+  const showAllRows = expanded || selectedIdx >= LIST_LIMIT;
+  const shownStores = showAllRows ? visible : visible.slice(0, LIST_LIMIT);
 
   return (
     <div>
@@ -137,11 +149,17 @@ export function StoreFinder() {
           title="Filialen in meiner Nähe"
           className="inline-flex items-center gap-1.5 rounded-lg border border-slate-300 px-3 py-2 text-sm font-medium text-slate-600 transition hover:bg-slate-100 disabled:opacity-50 dark:border-slate-700 dark:text-slate-300 dark:hover:bg-slate-800"
         >
-          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" className="h-4 w-4" aria-hidden>
-            <path d="M12 21s-6-5.686-6-10a6 6 0 1 1 12 0c0 4.314-6 10-6 10Z" strokeLinejoin="round" />
-            <circle cx="12" cy="11" r="2" />
-          </svg>
-          In meiner Nähe
+          {busy === "geo" ? (
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" className="h-4 w-4 animate-spin" aria-hidden>
+              <path d="M21 12a9 9 0 1 1-6.219-8.56" strokeLinecap="round" />
+            </svg>
+          ) : (
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" className="h-4 w-4" aria-hidden>
+              <path d="M12 21s-6-5.686-6-10a6 6 0 1 1 12 0c0 4.314-6 10-6 10Z" strokeLinejoin="round" />
+              <circle cx="12" cy="11" r="2" />
+            </svg>
+          )}
+          {busy === "geo" ? "Standort…" : "In meiner Nähe"}
         </button>
         {mode !== "all" && (
           <button
@@ -167,7 +185,10 @@ export function StoreFinder() {
               {[null, ...retailerNames].map((r) => (
                 <button
                   key={r ?? "all"}
-                  onClick={() => setRetailer(r)}
+                  onClick={() => {
+                    setRetailer(r);
+                    setExpanded(false);
+                  }}
                   className={`rounded-full px-3 py-1 text-xs font-medium transition ${
                     retailer === r
                       ? "bg-slate-900 text-white dark:bg-white dark:text-slate-900"
@@ -180,7 +201,7 @@ export function StoreFinder() {
             </div>
           )}
 
-          <StoreMap stores={visible} focus={focus} />
+          <StoreMap stores={visible} focus={focus} selected={selected} onSelectedChange={setSelected} />
           <p className="mt-2 text-xs text-slate-400 dark:text-slate-500">
             {visible.length} Filialen
             {inStockCount > 0 ? (
@@ -188,7 +209,7 @@ export function StoreFinder() {
             ) : (
               " — derzeit keine lagernd"
             )}
-            . Filialdaten von OBI &amp; BAUHAUS; MediaMarkt gibt keine Filialdaten für Server frei.
+            . Filialdaten von OBI &amp; BAUHAUS; Für MediaMarkt haben wir keine Filialdaten.
           </p>
         </div>
       )}
@@ -198,32 +219,55 @@ export function StoreFinder() {
           {visible.length === 0 ? (
             <p className="text-sm text-slate-500 dark:text-slate-400">Keine Filiale mit Verfügbarkeitsdaten im Umkreis gefunden. 😞</p>
           ) : (
-            <ul className="divide-y divide-slate-100 overflow-hidden rounded-xl border border-slate-200 bg-white shadow-sm dark:divide-slate-800 dark:border-slate-800 dark:bg-slate-900">
-              {visible.map((s) => (
-                <li
-                  key={`${s.retailerName}-${s.zip}-${s.name}`}
-                  className="flex items-center gap-3 px-4 py-2.5 text-sm"
+            <>
+              <ul className="divide-y divide-slate-100 overflow-hidden rounded-xl border border-slate-200 bg-white shadow-sm dark:divide-slate-800 dark:border-slate-800 dark:bg-slate-900">
+                {shownStores.map((s) => {
+                  const key = storeKey(s);
+                  return (
+                    <li key={key}>
+                      <button
+                        type="button"
+                        onClick={() => setSelected(key)}
+                        aria-label={`${s.retailerName} ${s.name} auf der Karte zeigen`}
+                        className={`flex w-full items-center gap-3 px-4 py-2.5 text-left cursor-pointer text-sm transition hover:bg-slate-50 dark:hover:bg-slate-800/60 ${
+                          selected === key ? "bg-sky-50 dark:bg-sky-950/40" : ""
+                        }`}
+                      >
+                        <span
+                          className={`h-2.5 w-2.5 shrink-0 rounded-full ${s.inStock ? "animate-pulse-dot bg-green-500" : "bg-red-400"}`}
+                          aria-hidden
+                        />
+                        <div className="min-w-0">
+                          <span className="font-medium text-slate-900 dark:text-slate-100">
+                            {s.retailerName} {s.name}
+                          </span>
+                          <span className="ml-2 text-slate-500 dark:text-slate-400">
+                            {s.zip} {s.city}
+                          </span>
+                        </div>
+                        {s.distanceKm !== null && (
+                          <span className="ml-auto shrink-0 tabular-nums text-slate-500 dark:text-slate-400">{s.distanceKm.toFixed(0)} km</span>
+                        )}
+                        <span
+                          className={`w-24 shrink-0 text-right text-xs font-medium ${s.inStock ? "text-green-700 dark:text-green-400" : "text-red-500 dark:text-red-400"}`}
+                        >
+                          {s.inStock ? "Lagernd" : "Ausverkauft"}
+                        </span>
+                      </button>
+                    </li>
+                  );
+                })}
+              </ul>
+              {visible.length > LIST_LIMIT && (
+                <button
+                  type="button"
+                  onClick={() => setExpanded(!showAllRows)}
+                  className="mt-2 text-sm font-medium text-sky-700 hover:text-sky-800 dark:text-sky-400 dark:hover:text-sky-300"
                 >
-                  <span className={`h-2.5 w-2.5 shrink-0 rounded-full ${s.inStock ? "animate-pulse-dot bg-green-500" : "bg-red-400"}`} aria-hidden />
-                  <div className="min-w-0">
-                    <span className="font-medium text-slate-900 dark:text-slate-100">
-                      {s.retailerName} {s.name}
-                    </span>
-                    <span className="ml-2 text-slate-500 dark:text-slate-400">
-                      {s.zip} {s.city}
-                    </span>
-                  </div>
-                  {s.distanceKm !== null && (
-                    <span className="ml-auto shrink-0 tabular-nums text-slate-500 dark:text-slate-400">{s.distanceKm.toFixed(0)} km</span>
-                  )}
-                  <span
-                    className={`w-24 shrink-0 text-right text-xs font-medium ${s.inStock ? "text-green-700 dark:text-green-400" : "text-red-500 dark:text-red-400"}`}
-                  >
-                    {s.inStock ? "Lagernd" : "Ausverkauft"}
-                  </span>
-                </li>
-              ))}
-            </ul>
+                  {showAllRows ? "weniger anzeigen" : `alle ${visible.length} anzeigen`}
+                </button>
+              )}
+            </>
           )}
         </div>
       )}
