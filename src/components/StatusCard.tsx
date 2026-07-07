@@ -37,16 +37,16 @@ export function StatusCard({ offer, now }: Readonly<{ offer: VariantStatus["offe
       href={offer.url}
       target="_blank"
       rel="nofollow noopener"
-      className="flex h-full items-center justify-between gap-3 rounded-xl border border-slate-200 bg-white px-4 py-3 shadow-sm transition-[border-color,box-shadow] hover:border-sky-300 hover:shadow-md dark:border-slate-800 dark:bg-slate-900 dark:hover:border-sky-700"
+      className="flex h-full items-stretch justify-between gap-3 rounded-xl border border-slate-200 bg-white px-4 py-3 shadow-sm transition-[border-color,box-shadow] hover:border-sky-300 hover:shadow-md dark:border-slate-800 dark:bg-slate-900 dark:hover:border-sky-700"
     >
-      <div className="min-w-0 flex-1">
-        <span className={`inline-flex items-center gap-1.5 rounded-full px-2 py-0.5 text-xs font-semibold ring-1 ring-inset ${meta.chip}`}>
+      <div className="flex min-w-0 flex-1 flex-col">
+        <span className={`inline-flex w-fit items-center gap-1.5 rounded-full px-2 py-0.5 text-xs font-semibold ring-1 ring-inset ${meta.chip}`}>
           <span className={`h-1.5 w-1.5 rounded-full ${meta.dot} ${offer.status === "in_stock" ? "animate-pulse-dot" : ""}`} aria-hidden />
           {meta.label}
         </span>
         <p className="mt-1.5 font-medium text-slate-900 dark:text-slate-100">{offer.retailerName}</p>
-        <p className="mt-0.5 text-xs text-slate-500 dark:text-slate-400">
-          {offer.pickupNote && <span className="text-sky-700 dark:text-sky-400">{offer.pickupNote} · </span>}
+        {offer.pickupNote && <p className="mt-0.5 text-xs text-sky-700 dark:text-sky-400">{offer.pickupNote}</p>}
+        <p className="mt-auto pt-2 text-xs text-slate-500 dark:text-slate-400">
           {offer.lastCheckedAt === 0 ? (
             "noch nicht geprüft"
           ) : (
@@ -56,7 +56,7 @@ export function StatusCard({ offer, now }: Readonly<{ offer: VariantStatus["offe
           )}
         </p>
       </div>
-      <div className="shrink-0 text-right">
+      <div className="flex shrink-0 flex-col justify-center text-right">
         <div className={`tabular-nums ${meta.priceClass}`}>{formatPrice(offer.priceCents)}</div>
         <div className={`text-xs ${meta.ctaClass}`}>{meta.cta}</div>
       </div>
