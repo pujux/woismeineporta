@@ -20,6 +20,15 @@ services:
       DATABASE_PATH: /data/app.db
       # Route only MediaMarkt through the WARP sidecar (GOST serves SOCKS5 on :1080).
       MEDIAMARKT_PROXY_URL: socks5://warp:1080
+      # Secrets — set these in the Dokploy UI env; they interpolate here.
+      PUBLIC_BASE_URL: ${PUBLIC_BASE_URL}
+      ADMIN_SECRET: ${ADMIN_SECRET}
+      VAPID_PUBLIC_KEY: ${VAPID_PUBLIC_KEY}
+      VAPID_PRIVATE_KEY: ${VAPID_PRIVATE_KEY}
+      VAPID_SUBJECT: ${VAPID_SUBJECT}
+      BREVO_API_KEY: ${BREVO_API_KEY}
+      EMAIL_FROM: ${EMAIL_FROM}
+      EMAIL_REPLY_TO: ${EMAIL_REPLY_TO:-}
     volumes:
       - porta-data:/data
     depends_on:
