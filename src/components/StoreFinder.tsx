@@ -100,7 +100,7 @@ export function StoreFinder() {
     }
   }
 
-  const retailerNames = [...new Set(stores.map((s) => s.retailerName))].sort();
+  const retailerNames = [...new Set(stores.map((s) => s.retailerName))].sort((a, b) => a.localeCompare(b));
   const visible = retailer ? stores.filter((s) => s.retailerName === retailer) : stores;
   const inStockCount = visible.filter((s) => s.inStock).length;
 

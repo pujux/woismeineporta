@@ -8,11 +8,30 @@ const geistSans = Geist({
   subsets: ["latin"],
 });
 
+const BASE_URL = process.env.PUBLIC_BASE_URL ?? "http://localhost:3000";
+const TITLE = "Wo is meine Porta? — Midea PortaSplit Verfügbarkeit Österreich";
+const DESCRIPTION =
+  "Live-Verfügbarkeit der Midea PortaSplit und PortaSplit Cool bei österreichischen Händlern — mit Sofort-Alarm per Push oder E-Mail, sobald sie wieder bestellbar ist.";
+
 export const metadata: Metadata = {
-  title: "Wo is meine Porta? — Midea PortaSplit Verfügbarkeit Österreich",
-  description:
-    "Live-Verfügbarkeit der Midea PortaSplit und PortaSplit Cool bei österreichischen Händlern — mit Sofort-Alarm per Push oder E-Mail, sobald sie wieder bestellbar ist.",
+  metadataBase: new URL(BASE_URL),
+  title: TITLE,
+  description: DESCRIPTION,
   manifest: "/manifest.webmanifest",
+  alternates: { canonical: "/" },
+  openGraph: {
+    type: "website",
+    locale: "de_AT",
+    siteName: "Wo is meine Porta?",
+    url: "/",
+    title: TITLE,
+    description: DESCRIPTION,
+  },
+  twitter: {
+    card: "summary",
+    title: TITLE,
+    description: DESCRIPTION,
+  },
 };
 
 export const viewport: Viewport = {

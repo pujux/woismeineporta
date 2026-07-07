@@ -1,12 +1,17 @@
 import { getDb } from "@/db";
 import { getRecentEvents, getVariantStatuses } from "@/lib/queries";
 import { singleflight } from "@/lib/singleflight";
+import { buildFaqJsonLd, buildProductJsonLd, jsonLdScript } from "@/lib/seo";
+import { FAQ_ITEMS } from "@/data/product-content";
 import { formatPrice } from "@/lib/format";
 import { EventFeed } from "@/components/EventFeed";
 import { LiveRefresh } from "@/components/LiveRefresh";
+import { ProductInfo } from "@/components/ProductInfo";
 import { StatusCard } from "@/components/StatusCard";
 import { StoreFinder } from "@/components/StoreFinder";
 import { SubscribePanel } from "@/components/SubscribePanel";
+
+const BASE_URL = process.env.PUBLIC_BASE_URL ?? "http://localhost:3000";
 
 export const dynamic = "force-dynamic";
 
@@ -21,9 +26,13 @@ export default async function Home() {
   // eslint-disable-next-line react-hooks/purity
   const now = Date.now();
   const anyInStock = statuses.some((s) => s.offers.some((o) => o.status === "in_stock"));
+  const jsonLd = [...buildProductJsonLd(statuses, BASE_URL), buildFaqJsonLd(FAQ_ITEMS)];
 
   return (
     <main className="mx-auto max-w-3xl px-4">
+      {jsonLd.map((obj, i) => (
+        <script key={i} type="application/ld+json" dangerouslySetInnerHTML={{ __html: jsonLdScript(obj) }} />
+      ))}
       <LiveRefresh />
       <header className="pt-12 pb-2">
         <div className="mb-4 inline-flex items-center gap-2 rounded-full border border-slate-200 bg-white px-3 py-1 text-xs font-medium text-slate-600 shadow-sm dark:border-slate-800 dark:bg-slate-900 dark:text-slate-300">
@@ -83,6 +92,11 @@ export default async function Home() {
       <section className="mt-12">
         <h2 className="mb-4 text-lg font-semibold">Online Updates</h2>
         <EventFeed events={events} now={now} />
+      </section>
+
+      <section className="mt-12">
+        <h2 className="mb-4 text-lg font-semibold">Über die Midea PortaSplit</h2>
+        <ProductInfo variants={statuses.map((s) => s.variant)} />
       </section>
     </main>
   );
