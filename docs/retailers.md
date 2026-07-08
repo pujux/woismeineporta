@@ -13,7 +13,11 @@ accessibility statements refer to plain Node `fetch` with browser-like headers
 | Tepto | ✓ PDP JSON-LD (base variant only) | — | works |
 | BAUHAUS | ✓ api.bauhaus `product-stock` (no warehouse) | ✓ 23 AT Fachcentren, per-store availability | everything (status, stores, price) via `api.bauhaus` — not Cloudflare; PDP no longer required |
 | Amazon | ✓ featured offer (buy box) only | — | PDP fetch works via impit from residential; **datacenter IPs may get CAPTCHA'd** |
+| PV-24 | ✓ WooCommerce Store API | — | public JSON API, works |
+| Online-Batterien | ✓ schema.org microdata | — | plain HTML, works |
 | Hornbach | — | — | **dropped: does not sell the PortaSplit in Austria** (0 search results on hornbach.at) |
+| hagebau | — | — | **dropped: does not sell the PortaSplit** (Midea category on hagebau.at lists other models, no PortaSplit) |
+| Lidl | — | — | **dropped: Lidl DE only** (not on lidl.at) |
 
 ## OBI (obi.at)
 
@@ -60,6 +64,16 @@ accessibility statements refer to plain Node `fetch` with browser-like headers
 - **Block guard:** a CAPTCHA/robot-check page has no `id="productTitle"` → the adapter throws (poller backs off / markUnknown) rather than reporting a false `out_of_stock`.
 - **Server-side access caveat:** PDPs fetch fine via impit from a residential IP, but Amazon aggressively CAPTCHAs **datacenter** IPs. If prod gets blocked, it likely needs WARP/a residential proxy (like MediaMarkt). Amazon has never stocked the PortaSplit first-party, so this mostly sits at `out_of_stock` — but it will catch a genuine featured offer if one ever appears.
 
+## PV-24 (pv-24.at)
+
+- PV-24 GmbH (Tyrol), a solar/PV shop that also sells the 12.000 BTU PortaSplit (heat+cool) as a sideline; no Cool variant. Realistic price (~€1.089, reduced from €1.999), not a scalper.
+- Runs **WordPress/WooCommerce**. The public **Store API** returns clean product JSON — no scraping: `GET https://www.pv-24.at/wp-json/wc/store/v1/products/33944` → `{ is_in_stock, prices: { price, currency_minor_unit }, permalink }`. `prices.price` is an integer string in the currency's minor unit ("108900" @ minor_unit 2 = €1.089,00). `src/lib/retailers/pv24.ts`; throws on an unexpected payload.
+
+## Online-Batterien (online-batterien.at)
+
+- AKKU SYS GmbH (Wolfurt, Vorarlberg), a battery-tech shop; sells the 12.000 BTU PortaSplit (heat+cool), free shipping to AT; no Cool variant. ~€1.106,71.
+- **Gambio** shop with no public JSON API (its REST API is auth-gated), but the PDP carries a schema.org **Offer as inline microdata**: `<meta itemprop="price" content="1106.71">` + `<link itemprop="availability" href="…/schema.org/…">`. Parsed via regex in `src/lib/retailers/online-batterien.ts`. `PreOrder`/`BackOrder` are mapped to `out_of_stock` (not immediate availability). Throws if the Offer microdata is absent (blocked / layout change).
+
 ## Fixtures (`src/lib/retailers/__fixtures__/`)
 
 - `obi-stores.json` — real store directory (79 stores)
@@ -71,4 +85,4 @@ accessibility statements refer to plain Node `fetch` with browser-like headers
 - `bauhaus-pdp-portasplit-synthetic.html` — minimal HTML wrapping the real JSON-LD
 - `amazon-pdp-{instock,oos}-synthetic.html` — minimal HTML with the parser-relevant markers (add-to-cart / core price / scalper offer)
 
-Variant coverage per retailer: OBI both; MediaMarkt both; Tepto base only; Bauhaus base only; Amazon both.
+Variant coverage per retailer: OBI both; MediaMarkt both; Tepto base only; Bauhaus base only; Amazon both; PV-24 base only; Online-Batterien base only.

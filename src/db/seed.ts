@@ -16,6 +16,8 @@ export async function seed(db: DataSource): Promise<void> {
       { slug: "mediamarkt", name: "MediaMarkt", homepage: "https://www.mediamarkt.at" },
       { slug: "tepto", name: "Tepto", homepage: "https://www.tepto.at" },
       { slug: "amazon", name: "Amazon", homepage: "https://www.amazon.de" },
+      { slug: "pv24", name: "PV-24", homepage: "https://www.pv-24.at" },
+      { slug: "online-batterien", name: "Online-Batterien", homepage: "https://online-batterien.at" },
     ],
     ["slug"],
   );
@@ -62,6 +64,16 @@ export async function seed(db: DataSource): Promise<void> {
       retailerSlug: "amazon",
       variantSlug: "portasplit-cool",
       url: "https://www.amazon.de/dp/B0GXDWTFR5",
+    },
+    {
+      retailerSlug: "pv24",
+      variantSlug: "portasplit",
+      url: "https://www.pv-24.at/products/midea-porta-split-mobile-klimaanlage-mit-ausseneinheit/",
+    },
+    {
+      retailerSlug: "online-batterien",
+      variantSlug: "portasplit",
+      url: "https://online-batterien.at/17837/midea-portasplit-klimageraet-diy-mobile-split-klimaanlage-12k-eek-a/a",
     },
   ];
   await db
