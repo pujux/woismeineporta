@@ -16,7 +16,22 @@ const PRODUCTS: Array<{ variant: VariantSlug; sku: string; url: string }> = [
 ];
 
 const STORE_DIRECTORY_URL = "https://www.obi.at/api/disc/store/locator/country/AT";
-const STOCK_CHUNK_SIZE = 10; // API rejects more than 10 storeIds per request
+const STOCK_CHUNK_SIZE = 10; // API rejects more than 10 storeIds per request (400)
+
+async function fetchStockChunk(
+  fetchFn: typeof fetch,
+  sku: string,
+  chunk: string[],
+): Promise<Array<{ storeId: string; availableQuantity: number }>> {
+  const res = await politeFetch(
+    `https://www.obi.at/api/pdp/v1/stock/${sku}?storeIds=${chunk.join(",")}`,
+    { headers: { Accept: "application/json" } },
+    fetchFn,
+  );
+  const rows = (await res.json()) as Array<{ storeId: string; availableQuantity: number }>;
+  if (!Array.isArray(rows)) throw new Error("obi: unexpected stock payload");
+  return rows;
+}
 
 interface ObiStore {
   storeNumber: string;
@@ -53,21 +68,23 @@ async function fetchStock(fetchFn: typeof fetch, sku: string, storeIds: string[]
     chunks++;
     const chunk = storeIds.slice(i, i + STOCK_CHUNK_SIZE);
     try {
-      const res = await politeFetch(
-        `https://www.obi.at/api/pdp/v1/stock/${sku}?storeIds=${chunk.join(",")}`,
-        { headers: { Accept: "application/json" } },
-        fetchFn,
-      );
-      const rows = (await res.json()) as Array<{ storeId: string; availableQuantity: number }>;
-      if (!Array.isArray(rows)) throw new Error("obi: unexpected stock payload");
+      let rows: Array<{ storeId: string; availableQuantity: number }>;
+      try {
+        rows = await fetchStockChunk(fetchFn, sku, chunk);
+      } catch {
+        // OBI's stock API returns a sporadic 504 on individual chunks; a single retry
+        // almost always succeeds (the same chunk works moments later), so the stores
+        // don't even miss a tick.
+        rows = await fetchStockChunk(fetchFn, sku, chunk);
+      }
       for (const row of rows) quantities.set(row.storeId, row.availableQuantity);
       for (const id of chunk) covered.add(id);
     } catch (err) {
-      // OBI's stock API returns a sporadic 504 on individual chunks. One bad chunk must
-      // not sink the whole sweep (and with it the already-fetched online offers) — skip
-      // it; those stores keep their last-known state this tick (see persistResult).
+      // Retry failed too. One bad chunk must not sink the whole sweep (and with it the
+      // already-fetched online offers) — skip it; those stores keep their last-known
+      // state this tick (see persistResult).
       lastError = err;
-      console.error(`obi: stock chunk failed (sku ${sku}, stores ${chunk[0]}…${chunk.at(-1)}):`, err instanceof Error ? err.message : err);
+      console.error(`obi: stock chunk failed after retry (sku ${sku}, stores ${chunk[0]}…${chunk.at(-1)}):`, err instanceof Error ? err.message : err);
     }
   }
 
