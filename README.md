@@ -39,14 +39,14 @@ auf einem Volume — keine weiteren Dienste (kein Redis, keine DB, kein Headless
 | MediaMarkt | ✓                  | nur Sammelsignal („in einzelnen Märkten abholbar")   |
 | Tepto      | ✓ (nur PortaSplit) | —                                                    |
 
-BAUHAUS und MediaMarkt sind Cloudflare-geschützt. Bei BAUHAUS kommen **Online-Status und
-Filialbestand** ohne Headless-Browser über die öffentliche `api.bauhaus` (apiKey + Origin):
-dasselbe `product-stock`-Endpoint liefert ohne Warehouse-Segment den Online-/Webshop-Bestand,
-mit Warehouse-Segment den je Fachcentrum. Die Cloudflare-PDP wird nur noch für den **Preis**
-gebraucht (per impit, Chrome-TLS/HTTP-Fingerprint); ist `BAUHAUS_API_KEY` gesetzt, entfällt sie
-ganz und lediglich der Preis fehlt. MediaMarkts Filial-API liegt hinter aggressiver Bot-Abwehr,
-die impit **nicht** passiert — daher nur das Sammelsignal. Details und Endpoints:
-[docs/retailers.md](docs/retailers.md).
+BAUHAUS und MediaMarkt sind Cloudflare-geschützt. Bei BAUHAUS kommen **Online-Status,
+Filialbestand und Preis** ohne Headless-Browser über die öffentliche `api.bauhaus`
+(apiKey + Origin): `product-stock` ohne Warehouse-Segment = Online-/Webshop-Bestand, mit
+Warehouse-Segment = je Fachcentrum, und der Preis über das Recommendation-Widget (das als
+einziges Endpoint mit dem öffentlichen Key `priceInfo` liefert). Ist `BAUHAUS_API_KEY`
+gesetzt, wird die Cloudflare-PDP gar nicht mehr gebraucht — nichts geht verloren. MediaMarkts
+Filial-API liegt hinter aggressiver Bot-Abwehr, die impit **nicht** passiert — daher nur das
+Sammelsignal. Details und Endpoints: [docs/retailers.md](docs/retailers.md).
 
 ## Live-Updates
 

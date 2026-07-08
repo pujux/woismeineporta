@@ -70,6 +70,50 @@ export async function fetchBauhausOnlineStock(fetchFn: typeof fetch, apiKey: str
   return parseStock(await res.json());
 }
 
+// The Bloomreach recommendation widget — the only api.bauhaus endpoint reachable with
+// the public apiKey that carries `priceInfo`. Returns a list of related products.
+function recommendationUrl(seedProductId: string): string {
+  return `${API_BASE}/v1/product-recommendation/4/at/webshop/product-detail-page?product-id=${seedProductId}&visitor-id=x&referrer-url=`;
+}
+
+interface DiscoveryResult {
+  id?: string;
+  metadata?: { product?: { priceInfo?: { price?: number | null } } };
+}
+
+async function fetchRecommendations(
+  fetchFn: typeof fetch,
+  apiKey: string,
+  seedProductId: string,
+): Promise<DiscoveryResult[]> {
+  const res = await politeFetch(recommendationUrl(seedProductId), { headers: apiHeaders(apiKey) }, fetchFn);
+  const body = (await res.json()) as unknown;
+  const root = Array.isArray(body) ? body[0] : body;
+  const results = (root as { results?: unknown } | null)?.results;
+  return Array.isArray(results) ? (results as DiscoveryResult[]) : [];
+}
+
+/**
+ * Bauhaus's price/masterdata endpoints need OAuth — the public apiKey can't read a
+ * product's own price directly. But the recommendation widget returns full `priceInfo`
+ * for every product it lists, and while a product never appears in its OWN
+ * recommendations, its accessories cross-recommend back to it. So: seed the widget with
+ * the PortaSplit's own top recommendations (its accessories) and read the price off the
+ * back-reference. Self-bootstrapping (no hardcoded accessory id) and best-effort —
+ * returns null if the product doesn't surface (recommendations are dynamic).
+ */
+export async function fetchBauhausPrice(fetchFn: typeof fetch, apiKey: string): Promise<number | null> {
+  const productId = PRODUCTS[0].productId;
+  const related = await fetchRecommendations(fetchFn, apiKey, productId);
+  for (const seed of related.slice(0, 3)) {
+    if (!seed.id || seed.id === productId) continue;
+    const back = await fetchRecommendations(fetchFn, apiKey, seed.id);
+    const price = back.find((p) => p.id === productId)?.metadata?.product?.priceInfo?.price;
+    if (typeof price === "number") return Math.round(price * 100);
+  }
+  return null;
+}
+
 /**
  * Queries every Austrian Fachcentrum and returns per-store availability.
  * Individual store errors are skipped (that store is omitted); a 401/403 —
