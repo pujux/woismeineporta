@@ -37,23 +37,43 @@ async function fetchStores(fetchFn: typeof fetch): Promise<StoreInfo[]> {
   }));
 }
 
-async function fetchStock(fetchFn: typeof fetch, sku: string, storeIds: string[]): Promise<Map<string, number>> {
+interface StockSweep {
+  quantities: Map<string, number>;
+  /** storeIds whose chunk succeeded — only these get a fresh availability reading. */
+  covered: Set<string>;
+}
+
+async function fetchStock(fetchFn: typeof fetch, sku: string, storeIds: string[]): Promise<StockSweep> {
   const quantities = new Map<string, number>();
+  const covered = new Set<string>();
+  let chunks = 0;
+  let lastError: unknown = null;
+
   for (let i = 0; i < storeIds.length; i += STOCK_CHUNK_SIZE) {
+    chunks++;
     const chunk = storeIds.slice(i, i + STOCK_CHUNK_SIZE);
-    const res = await politeFetch(
-      `https://www.obi.at/api/pdp/v1/stock/${sku}?storeIds=${chunk.join(",")}`,
-      { headers: { Accept: "application/json" } },
-      fetchFn,
-    );
-    const rows = (await res.json()) as Array<{
-      storeId: string;
-      availableQuantity: number;
-    }>;
-    if (!Array.isArray(rows)) throw new Error("obi: unexpected stock payload");
-    for (const row of rows) quantities.set(row.storeId, row.availableQuantity);
+    try {
+      const res = await politeFetch(
+        `https://www.obi.at/api/pdp/v1/stock/${sku}?storeIds=${chunk.join(",")}`,
+        { headers: { Accept: "application/json" } },
+        fetchFn,
+      );
+      const rows = (await res.json()) as Array<{ storeId: string; availableQuantity: number }>;
+      if (!Array.isArray(rows)) throw new Error("obi: unexpected stock payload");
+      for (const row of rows) quantities.set(row.storeId, row.availableQuantity);
+      for (const id of chunk) covered.add(id);
+    } catch (err) {
+      // OBI's stock API returns a sporadic 504 on individual chunks. One bad chunk must
+      // not sink the whole sweep (and with it the already-fetched online offers) — skip
+      // it; those stores keep their last-known state this tick (see persistResult).
+      lastError = err;
+      console.error(`obi: stock chunk failed (sku ${sku}, stores ${chunk[0]}…${chunk.at(-1)}):`, err instanceof Error ? err.message : err);
+    }
   }
-  return quantities;
+
+  // Every chunk failed → OBI's stock API is down (or its contract changed); surface it.
+  if (chunks > 0 && covered.size === 0) throw lastError ?? new Error("obi: all stock chunks failed");
+  return { quantities, covered };
 }
 
 export const obiAdapter: RetailerAdapter = {
@@ -72,8 +92,11 @@ export const obiAdapter: RetailerAdapter = {
     const storeIds = stores.map((s) => s.externalId);
     const storeStock: StoreStock[] = [];
     for (const product of PRODUCTS) {
-      const quantities = await fetchStock(fetchFn, product.sku, storeIds);
+      const { quantities, covered } = await fetchStock(fetchFn, product.sku, storeIds);
       for (const store of stores) {
+        // Stores whose chunk failed this tick are omitted, not reported as out-of-stock,
+        // so they retain their last-known availability instead of flipping to false.
+        if (!covered.has(store.externalId)) continue;
         storeStock.push({
           store,
           variant: product.variant,
