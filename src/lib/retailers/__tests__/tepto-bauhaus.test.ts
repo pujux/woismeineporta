@@ -1,7 +1,10 @@
-import { describe, expect, it } from "vitest";
+import { afterEach, describe, expect, it, vi } from "vitest";
 import { teptoAdapter } from "@/lib/retailers/tepto";
 import { bauhausAdapter } from "@/lib/retailers/bauhaus";
 import { fixture, fixtureFetch } from "./helpers";
+
+const IN_STOCK = JSON.stringify({ amount: 5, availibility_level: "SOME" });
+const OUT_OF_STOCK = JSON.stringify({ amount: 0, availibility_level: "OUT_OF_STOCK" });
 
 describe("teptoAdapter", () => {
   it("parses the base variant from the PDP fixture", async () => {
@@ -25,20 +28,52 @@ describe("teptoAdapter", () => {
 });
 
 describe("bauhausAdapter", () => {
-  it("parses JSON-LD when not blocked", async () => {
-    const result = await bauhausAdapter.check(fixtureFetch([["bauhaus.at", fixture("bauhaus-pdp-portasplit-synthetic.html")]]));
+  afterEach(() => {
+    delete process.env.BAUHAUS_API_KEY;
+  });
+
+  it("takes price from the PDP but online status from api.bauhaus (which wins)", async () => {
+    // The synthetic PDP fixture's JSON-LD says out_of_stock; api.bauhaus says in stock.
+    // api.bauhaus is the authoritative real-time signal, so the status must be in_stock.
+    const result = await bauhausAdapter.check(
+      fixtureFetch([
+        ["api.bauhaus", IN_STOCK],
+        ["bauhaus.at", fixture("bauhaus-pdp-portasplit-synthetic.html")],
+      ]),
+    );
     expect(bauhausAdapter.tier).toBe("slow");
     expect(result.offers).toEqual([
       {
         variant: "portasplit",
         url: "https://www.bauhaus.at/klimaanlagen/midea-klimasplitgeraet-portasplit-12000-btu/p/31934233",
         priceCents: 74900,
+        status: "in_stock",
+      },
+    ]);
+    expect(result.storeStock).toHaveLength(23);
+  });
+
+  it("skips the PDP entirely when BAUHAUS_API_KEY is set (price null, status from api)", async () => {
+    process.env.BAUHAUS_API_KEY = "envkey";
+    const fetchFn = vi.fn(async (input: RequestInfo | URL) => {
+      const url = String(input);
+      if (url.includes("www.bauhaus.at")) throw new Error("PDP must not be fetched when BAUHAUS_API_KEY is set");
+      return new Response(OUT_OF_STOCK, { status: 200 });
+    }) as unknown as typeof fetch;
+
+    const result = await bauhausAdapter.check(fetchFn);
+    expect(result.offers).toEqual([
+      {
+        variant: "portasplit",
+        url: "https://www.bauhaus.at/klimaanlagen/midea-klimasplitgeraet-portasplit-12000-btu/p/31934233",
+        priceCents: null,
         status: "out_of_stock",
       },
     ]);
+    expect(result.storeStock).toHaveLength(23);
   });
 
-  it("throws AdapterHttpError on the usual Cloudflare 403", async () => {
+  it("throws AdapterHttpError on the usual Cloudflare 403 (no key configured)", async () => {
     await expect(bauhausAdapter.check(fixtureFetch([["bauhaus.at", "Sicherheitsprüfung", 403]]))).rejects.toMatchObject({
       name: "AdapterHttpError",
       status: 403,

@@ -1,11 +1,17 @@
 import { describe, expect, it, vi } from "vitest";
 import { AdapterHttpError } from "@/lib/retailers/fetch";
-import { fetchBauhausStoreStock, parseStock } from "@/lib/retailers/bauhaus-stores";
+import {
+  fetchBauhausOnlineStock,
+  fetchBauhausStoreStock,
+  parseStock,
+} from "@/lib/retailers/bauhaus-stores";
 
 describe("parseStock (real api.bauhaus shape: {amount, availibility_level})", () => {
   it.each([
     [{ amount: 0, availibility_level: "OUT_OF_STOCK" }, false],
     [{ amount: 3, availibility_level: "IN_STOCK" }, true],
+    [{ amount: 19, availibility_level: "MANY" }, true],
+    [{ amount: 3, availibility_level: "SOME" }, true],
     [{ amount: 0, availibility_level: "IN_STOCK" }, true], // level fallback
     [{ amount: 0, availibility_level: "LOW_STOCK" }, true],
     [{ amount: 0, availibility_level: "LIMITED" }, true],
@@ -14,6 +20,34 @@ describe("parseStock (real api.bauhaus shape: {amount, availibility_level})", ()
     [null, false],
   ])("%o -> %s", (body, expected) => {
     expect(parseStock(body)).toBe(expected);
+  });
+});
+
+describe("fetchBauhausOnlineStock (no-warehouse product-stock = online orderability)", () => {
+  it("hits the warehouse-less endpoint with the apikey and maps amount>0 to true", async () => {
+    const fetchFn = vi.fn(
+      async () => new Response(JSON.stringify({ amount: 5, availibility_level: "SOME" }), { status: 200 }),
+    ) as unknown as typeof fetch;
+
+    await expect(fetchBauhausOnlineStock(fetchFn, "pubkey")).resolves.toBe(true);
+
+    const calls = (fetchFn as unknown as { mock: { calls: [string, RequestInit][] } }).mock.calls;
+    const [url, init] = calls[0];
+    expect(String(url)).toContain("/v1/product-stock/at/products/31934233/stock");
+    expect(String(url)).not.toContain("/warehouses/");
+    expect(new Headers(init.headers).get("apikey")).toBe("pubkey");
+  });
+
+  it("maps out-of-stock to false", async () => {
+    const fetchFn = vi.fn(
+      async () => new Response(JSON.stringify({ amount: 0, availibility_level: "OUT_OF_STOCK" }), { status: 200 }),
+    ) as unknown as typeof fetch;
+    await expect(fetchBauhausOnlineStock(fetchFn, "pubkey")).resolves.toBe(false);
+  });
+
+  it("throws on 401/403 so the adapter can degrade", async () => {
+    const fetchFn = vi.fn(async () => new Response("nope", { status: 403 })) as unknown as typeof fetch;
+    await expect(fetchBauhausOnlineStock(fetchFn, "bad")).rejects.toBeInstanceOf(AdapterHttpError);
   });
 });
 

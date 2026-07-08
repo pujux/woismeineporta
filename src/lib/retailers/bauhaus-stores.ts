@@ -37,6 +37,14 @@ function stockUrl(productId: string, warehouseId: string): string {
   return `${API_BASE}/v1/product-stock/at/products/${productId}/warehouses/${warehouseId}/stock`;
 }
 
+// Same product-stock endpoint WITHOUT a warehouse segment returns the online
+// (webshop/central) stock. Verified 2026-07-08 to track the PDP `deliverable`
+// flag exactly (amount>0 ⇔ deliverable=1) across in- and out-of-stock products —
+// so it's the online orderability signal, reachable without the Cloudflare PDP.
+function onlineStockUrl(productId: string): string {
+  return `${API_BASE}/v1/product-stock/at/products/${productId}/stock`;
+}
+
 /**
  * Live response shape (verified 2026-07-06):
  *   { "amount": 0, "availibility_level": "OUT_OF_STOCK" }   // sic: "availibility"
@@ -49,7 +57,17 @@ export function parseStock(body: unknown): boolean {
   const o = body as Record<string, unknown>;
   if (typeof o.amount === "number" && o.amount > 0) return true;
   const level = typeof o.availibility_level === "string" ? o.availibility_level : "";
-  return /IN_STOCK|LOW_STOCK|LIMITED|AVAILABLE/i.test(level);
+  return /IN_STOCK|LOW_STOCK|LIMITED|AVAILABLE|MANY|SOME/i.test(level);
+}
+
+/**
+ * Online (webshop) availability for the PortaSplit from api.bauhaus — same auth as
+ * the per-store sweep, no PDP/Cloudflare. Throws on 401/403 (apiKey rejected/rotated)
+ * so the adapter can degrade; other errors propagate to the caller's catch.
+ */
+export async function fetchBauhausOnlineStock(fetchFn: typeof fetch, apiKey: string): Promise<boolean> {
+  const res = await politeFetch(onlineStockUrl(PRODUCTS[0].productId), { headers: apiHeaders(apiKey) }, fetchFn);
+  return parseStock(await res.json());
 }
 
 /**

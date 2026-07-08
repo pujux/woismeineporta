@@ -11,7 +11,7 @@ accessibility statements refer to plain Node `fetch` with browser-like headers
 | OBI | ✓ PDP JSON-LD | ✓ 79 stores, exact quantities | works |
 | MediaMarkt | ✓ PDP JSON-LD + `onlineStatus` | aggregate pickup signal only (per-store API blocked) | PDP works, GraphQL 403 (Akamai) |
 | Tepto | ✓ PDP JSON-LD (base variant only) | — | works |
-| BAUHAUS | ✓ (via impit) | ✓ 23 AT Fachcentren, per-store availability | Cloudflare-blocked for plain fetch; **cleared with impit Chrome TLS impersonation** |
+| BAUHAUS | ✓ api.bauhaus `product-stock` (no warehouse) | ✓ 23 AT Fachcentren, per-store availability | availability via `api.bauhaus` (not Cloudflare); PDP (price only) Cloudflare-blocked, cleared with impit |
 | Hornbach | — | — | **dropped: does not sell the PortaSplit in Austria** (0 search results on hornbach.at) |
 
 ## OBI (obi.at)
@@ -43,8 +43,10 @@ accessibility statements refer to plain Node `fetch` with browser-like headers
 
 - PortaSplit PDP: `https://www.bauhaus.at/klimaanlagen/midea-klimasplitgeraet-portasplit-12000-btu/p/31934233` (Prod.Nr. `31934233`)
 - Behind Cloudflare bot management: plain `curl`/Node fetch → 403 challenge ("Sicherheitsprüfung"). **Solved with [impit](https://www.npmjs.com/package/impit)** (`{ browser: "chrome" }`), which impersonates Chrome's TLS + HTTP/2 fingerprint — returns the real PDP (verified 2026-07-06). The whole poller now fetches through impit (`src/lib/retailers/impit-fetch.ts`).
-- Online status/price parse from JSON-LD like the others (749 €, `OutOfStock` at capture time).
-- **Store-level ("Fachcentrum") data — IMPLEMENTED (2026-07-06).** The PDP stock endpoint `https://api.bauhaus/v1/product-stock/at/products/{id}/warehouses/{wh}/stock` needs **no OAuth token** — the public Apigee `apiKey` embedded in the PDP (`apiKey:"…"`) plus an allowed `Origin`/`Referer: https://www.bauhaus.at` is sufficient. The earlier 401s were a missing `Origin` header, not a missing token. The adapter (`src/lib/retailers/bauhaus-stores.ts`) extracts the apiKey from the PDP it already fetches and sweeps all 23 AT Fachcentren (`src/data/bauhaus-stores.json`, exact coordinates); response shape `{ amount, availibility_level }` (sic). Degrades to online-only if the key is missing/rejected.
+- Price parses from the PDP JSON-LD (749 € at capture time). The PDP is now the **only** thing that needs the Cloudflare-cleared page — everything else comes from `api.bauhaus`.
+- **Online status via api.bauhaus — IMPLEMENTED (2026-07-08).** The same `product-stock` endpoint **without** a warehouse segment returns the online/webshop stock: `https://api.bauhaus/v1/product-stock/at/products/{id}/stock` → `{ amount, availibility_level }`. Verified to track the PDP `dataLayer.product.deliverable` flag exactly (`amount>0 ⇔ deliverable=1`) across in- and out-of-stock products — so it's the online orderability signal, reachable without the Cloudflare PDP. `fetchBauhausOnlineStock()` in `src/lib/retailers/bauhaus-stores.ts`; the adapter treats it as authoritative and only falls back to the PDP JSON-LD `availability` if that call fails.
+- **Store-level ("Fachcentrum") data — IMPLEMENTED (2026-07-06).** Same endpoint **with** a warehouse segment: `.../warehouses/{fachcentrumId}/stock`. Needs **no OAuth token** — the public Apigee `apiKey` embedded in the PDP (`apiKey:"…"`) plus an allowed `Origin`/`Referer: https://www.bauhaus.at` is sufficient. The earlier 401s were a missing `Origin` header, not a missing token. Sweeps all 23 AT Fachcentren (`src/data/bauhaus-stores.json`, exact coordinates).
+- **`BAUHAUS_API_KEY` env (2026-07-07).** From a flagged/datacenter IP even impit gets 403'd on the PDP, but `api.bauhaus` stays reachable. Set `BAUHAUS_API_KEY` to the public apiKey and the adapter skips the PDP entirely — online status + all 23 Fachcentren still work; only the price is unavailable. Both api.bauhaus calls failing (e.g. key rotated) throws so the poller backs off.
 - No Cool variant on bauhaus.at (only the 12.000 BTU model).
 
 ## Fixtures (`src/lib/retailers/__fixtures__/`)
