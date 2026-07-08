@@ -39,12 +39,18 @@ auf einem Volume — keine weiteren Dienste (kein Redis, keine DB, kein Headless
 | MediaMarkt | ✓                  | nur Sammelsignal („in einzelnen Märkten abholbar")   |
 | Tepto      | ✓ (nur PortaSplit) | —                                                    |
 | Amazon     | ✓ (nur Featured Offer / Buy Box) | —                                      |
+| PV-24      | ✓ (nur PortaSplit) | —                                                    |
+| Online-Batterien | ✓ (nur PortaSplit) | —                                              |
 
 Amazon.de führt beide Varianten, hat sie aber selten selbst am Lager — meist nur überteuerte
 Drittanbieter („Collectible – Like New", ~€1.800). Als verfügbar zählt daher **nur das Featured
 Offer (Buy Box)**; die Marketplace-Angebote werden ignoriert, sonst gäbe es irreführende
 Alarme. Kommt der Server-IP eine CAPTCHA-Seite zurück, meldet der Adapter `unknown` statt
 falscher Verfügbarkeit.
+
+PV-24 und Online-Batterien sind kleinere österreichische Shops, die nur die 12.000-BTU-Variante
+führen (kein Bot-Schutz): PV-24 liefert Status + Preis sauber über die öffentliche
+WooCommerce-Store-API, Online-Batterien über schema.org-Microdata auf der Produktseite.
 
 BAUHAUS und MediaMarkt sind Cloudflare-geschützt. Bei BAUHAUS kommen **Online-Status,
 Filialbestand und Preis** ohne Headless-Browser über die öffentliche `api.bauhaus`
