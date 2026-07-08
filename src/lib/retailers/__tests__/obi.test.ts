@@ -47,26 +47,47 @@ describe("obiAdapter", () => {
     expect(inStock.length).toBe(3);
   });
 
-  it("tolerates a sporadic 504 on one stock chunk — keeps offers and the other stores", async () => {
+  it("retries a chunk that 504s once, then succeeds — nothing is missed", async () => {
     const stock = fixture("obi-stock-portasplit.json");
-    // A single storeIds chunk (the one containing store 002) 504s; every other request is fine.
+    const failedOnce = new Set<string>();
     const fetchFn = vi.fn(async (input: RequestInfo | URL) => {
       const url = String(input);
       if (url.includes("/p/3586245/")) return new Response(fixture("obi-pdp-portasplit.html"), { status: 200 });
       if (url.includes("/p/4593455/")) return new Response(fixture("obi-pdp-portasplit-cool.html"), { status: 200 });
       if (url.includes("/api/disc/store/locator/country/AT")) return new Response(fixture("obi-stores.json"), { status: 200 });
       if (url.includes("/api/pdp/v1/stock/")) {
-        // The SKUs (3586245 / 4593455) don't contain "002", so this uniquely targets
-        // the chunk holding store 002, wherever it falls within the comma list.
-        if (url.includes("002")) return new Response("gateway timeout", { status: 504 });
+        // The chunk holding store 002 times out on its FIRST attempt, succeeds on retry.
+        if (url.includes("002") && !failedOnce.has(url)) {
+          failedOnce.add(url);
+          return new Response("gateway timeout", { status: 504 });
+        }
         return new Response(stock, { status: 200 });
       }
       return new Response("not found", { status: 404 });
     }) as unknown as typeof fetch;
 
     const result = await obiAdapter.check(fetchFn);
-    expect(result.offers).toHaveLength(2); // online offers survive the chunk failure
-    // The failed chunk's stores are omitted (retain last-known), not flipped to out-of-stock.
+    // 79 stores x 2 variants — the retried chunk recovered, so no store is omitted.
+    expect(result.storeStock).toHaveLength(158);
+    expect(result.storeStock!.some((s) => s.store.externalId === "002")).toBe(true);
+  });
+
+  it("omits a chunk that fails twice (504 on both attempts), keeps the rest", async () => {
+    const stock = fixture("obi-stock-portasplit.json");
+    const fetchFn = vi.fn(async (input: RequestInfo | URL) => {
+      const url = String(input);
+      if (url.includes("/p/3586245/")) return new Response(fixture("obi-pdp-portasplit.html"), { status: 200 });
+      if (url.includes("/p/4593455/")) return new Response(fixture("obi-pdp-portasplit-cool.html"), { status: 200 });
+      if (url.includes("/api/disc/store/locator/country/AT")) return new Response(fixture("obi-stores.json"), { status: 200 });
+      if (url.includes("/api/pdp/v1/stock/")) {
+        if (url.includes("002")) return new Response("gateway timeout", { status: 504 }); // fails every attempt
+        return new Response(stock, { status: 200 });
+      }
+      return new Response("not found", { status: 404 });
+    }) as unknown as typeof fetch;
+
+    const result = await obiAdapter.check(fetchFn);
+    expect(result.offers).toHaveLength(2);
     expect(result.storeStock!.length).toBeGreaterThan(0);
     expect(result.storeStock!.length).toBeLessThan(158);
     expect(result.storeStock!.some((s) => s.store.externalId === "002")).toBe(false);
