@@ -1,6 +1,7 @@
 # Optional deployment: the app + a Cloudflare WARP sidecar, so ALL retailer fetches
-# egress through WARP's IP. Use this when the server IP gets flagged by Cloudflare
-# (Bauhaus + MediaMarkt 403). Deploy as a Dokploy "Compose" service.
+# egress through WARP's IP. Use this when the server IP gets flagged by bot protection
+# (MediaMarkt 403 / Amazon CAPTCHA; Bauhaus now goes via api.bauhaus, no proxy needed).
+# Deploy as a Dokploy "Compose" service.
 #
 # Secrets (VAPID_*, BREVO_*, ADMIN_SECRET, PUBLIC_BASE_URL) are set in the Dokploy
 # UI env — not committed here. Attach your domain to the `app` service (port 3000)

@@ -125,8 +125,9 @@ angelegt. Vor Updates mit Schema-Änderungen die DB-Datei sichern (`/data/app.db
 
 ### Retailer-Fetches hinter Cloudflare WARP (optional, experimentell)
 
-Wird die Server-IP von Cloudflare geflaggt, liefern **BAUHAUS und MediaMarkt 403** (OBI/Tepto
-sind nicht Cloudflare-geschützt). `RETAILER_PROXY_URL` leitet dann **alle** Retailer-Fetches
+Wird die Server-IP geflaggt, liefern **BAUHAUS und MediaMarkt 403** (Cloudflare) und
+**Amazon eine CAPTCHA-Seite** (OBI/Tepto sind ungeschützt; BAUHAUS umgeht das inzwischen
+komplett über `api.bauhaus`). `RETAILER_PROXY_URL` leitet dann **alle** Retailer-Fetches
 über einen Proxy mit sauberer Egress-IP — z. B. einen Cloudflare-WARP-Sidecar.
 
 **In Cloudflare:** nichts. Free WARP registriert sich selbst; kein Account, kein Zero Trust,
@@ -140,11 +141,11 @@ keine DNS-Änderung nötig (dein Cloudflare-DNS-Account ist davon unberührt).
    Dokploy-UI setzen; `RETAILER_PROXY_URL=socks5://warp:1080` ist in der Compose-Datei schon
    gesetzt.
 3. Domain im Dokploy-UI auf den `app`-Service (Port 3000) legen, HTTPS an.
-4. Deploy, dann Logs prüfen: verschwinden die `errors` für bauhaus/mediamarkt, klappt WARP.
+4. Deploy, dann Logs prüfen: verschwinden die `errors` für mediamarkt/amazon, klappt WARP.
 
 Hinweis: WARP nutzt Cloudflare-eigene Egress-IPs — ob deren IP von der jeweiligen Bot-Abwehr
 akzeptiert wird, ist nicht garantiert. Klappt es nicht, hilft nur ein Residential-Proxy
-(kostenpflichtig) oder — bei MediaMarkt (reines Online-Signal) — Verzicht.
+(kostenpflichtig) oder — bei MediaMarkt/Amazon (reine Online-Signale) — Verzicht.
 
 ## Hinweise
 
@@ -160,5 +161,5 @@ akzeptiert wird, ist nicht garantiert. Klappt es nicht, hilft nur ein Residentia
 
 MIT — siehe [LICENSE](LICENSE). © 2026 Julian Pufler.
 
-Kein offizielles Angebot von und keine Verbindung zu Midea, OBI, BAUHAUS, MediaMarkt oder
-Tepto. Alle Marken gehören ihren jeweiligen Inhabern.
+Kein offizielles Angebot von und keine Verbindung zu Midea, OBI, BAUHAUS, MediaMarkt,
+Tepto oder Amazon. Alle Marken gehören ihren jeweiligen Inhabern.
