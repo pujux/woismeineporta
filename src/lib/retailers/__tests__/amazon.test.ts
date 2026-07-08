@@ -37,22 +37,54 @@ describe("parseAmazon", () => {
 });
 
 describe("amazonAdapter", () => {
+  // Minimal inline pages so tests can vary price/availability per colour ASIN.
+  const inStock = (price: string) =>
+    `<span id="productTitle">Midea PortaSplit</span><div id="corePrice_feature_div"><span class="a-offscreen">${price}</span></div><input id="add-to-cart-button">`;
+  const outOfStock = `<span id="productTitle">Midea PortaSplit</span>Derzeit nicht verfügbar.`;
+
   it("has the right identity and is online-only", () => {
     expect(amazonAdapter.slug).toBe("amazon");
     expect(amazonAdapter.tier).toBe("slow");
   });
 
-  it("parses both variants (portasplit in stock, cool out of stock)", async () => {
+  it("marks portasplit available if EITHER colour has a featured offer (grey in, peach out)", async () => {
     const result = await amazonAdapter.check(
       fixtureFetch([
-        ["/dp/B0GX16LKSC", fixture("amazon-pdp-instock-synthetic.html")],
-        ["/dp/B0GXDWTFR5", fixture("amazon-pdp-oos-synthetic.html")],
+        ["/dp/B0GX16LKSC", outOfStock], // Pfirsich out
+        ["/dp/B0D3PP64JS", inStock("749,00 €")], // Grau in
+        ["/dp/B0GXDWTFR5", outOfStock], // Cool out
       ]),
     );
-    expect(result.retailerSlug).toBe("amazon");
     expect(result.storeStock).toBeNull();
     expect(result.offers).toEqual([
-      { variant: "portasplit", url: "https://www.amazon.de/dp/B0GX16LKSC", priceCents: 74900, status: "in_stock" },
+      // links to the in-stock colour (grey)
+      { variant: "portasplit", url: "https://www.amazon.de/dp/B0D3PP64JS", priceCents: 74900, status: "in_stock" },
+      { variant: "portasplit-cool", url: "https://www.amazon.de/dp/B0GXDWTFR5", priceCents: null, status: "out_of_stock" },
+    ]);
+  });
+
+  it("picks the cheapest in-stock colour for price + link", async () => {
+    const result = await amazonAdapter.check(
+      fixtureFetch([
+        ["/dp/B0GX16LKSC", inStock("799,00 €")], // Pfirsich in, dearer
+        ["/dp/B0D3PP64JS", inStock("749,00 €")], // Grau in, cheaper
+        ["/dp/B0GXDWTFR5", outOfStock],
+      ]),
+    );
+    const porta = result.offers.find((o) => o.variant === "portasplit")!;
+    expect(porta).toEqual({ variant: "portasplit", url: "https://www.amazon.de/dp/B0D3PP64JS", priceCents: 74900, status: "in_stock" });
+  });
+
+  it("out of stock when all colours lack a featured offer → links to the primary colour", async () => {
+    const result = await amazonAdapter.check(
+      fixtureFetch([
+        ["/dp/B0GX16LKSC", outOfStock],
+        ["/dp/B0D3PP64JS", outOfStock],
+        ["/dp/B0GXDWTFR5", outOfStock],
+      ]),
+    );
+    expect(result.offers).toEqual([
+      { variant: "portasplit", url: "https://www.amazon.de/dp/B0GX16LKSC", priceCents: null, status: "out_of_stock" },
       { variant: "portasplit-cool", url: "https://www.amazon.de/dp/B0GXDWTFR5", priceCents: null, status: "out_of_stock" },
     ]);
   });
