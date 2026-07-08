@@ -1,12 +1,19 @@
 import { politeFetch } from "./fetch";
 import type { OnlineOffer, RetailerAdapter, StockStatus, VariantSlug } from "./types";
 
-const PRODUCTS: Array<{ variant: VariantSlug; asin: string; url: string }> = [
-  // PortaSplit-E, 12.000 BTU, Kühlen + Heizen
-  { variant: "portasplit", asin: "B0GX16LKSC", url: "https://www.amazon.de/dp/B0GX16LKSC" },
-  // PortaSplit Cool, 8.000 BTU, nur Kühlung
-  { variant: "portasplit-cool", asin: "B0GXDWTFR5", url: "https://www.amazon.de/dp/B0GXDWTFR5" },
+// A variant can map to several ASINs — Amazon lists the same product per colour. The
+// colour is irrelevant to "is the PortaSplit buyable", so we track all of them and treat
+// the variant as available if ANY colour has a featured offer.
+const PRODUCTS: Array<{ variant: VariantSlug; asins: string[] }> = [
+  // 12.000 BTU PortaSplit-E (Kühlen + Heizen) — Pfirsich + Grau.
+  { variant: "portasplit", asins: ["B0GX16LKSC", "B0D3PP64JS"] },
+  // 8.000 BTU PortaSplit Cool (nur Kühlung) — single colour.
+  { variant: "portasplit-cool", asins: ["B0GXDWTFR5"] },
 ];
+
+function productUrl(asin: string): string {
+  return `https://www.amazon.de/dp/${asin}`;
+}
 
 // "1.234,56 €" / "40,33€" → 123456 / 4033 (cents). German number formatting.
 export function parseEuroCents(raw: string | undefined): number | null {
@@ -50,14 +57,28 @@ export const amazonAdapter: RetailerAdapter = {
   async check(fetchFn) {
     const offers: OnlineOffer[] = [];
     for (const product of PRODUCTS) {
-      // language=de_DE forces German markup regardless of the egress IP's geo.
-      const res = await politeFetch(
-        `${product.url}?language=de_DE`,
-        { headers: { Accept: "text/html", "Accept-Language": "de-AT,de;q=0.9" } },
-        fetchFn,
-      );
-      const { status, priceCents } = parseAmazon(await res.text());
-      offers.push({ variant: product.variant, url: product.url, priceCents, status });
+      const perColour: Array<{ asin: string; priceCents: number | null; inStock: boolean }> = [];
+      for (const asin of product.asins) {
+        // language=de_DE forces German markup regardless of the egress IP's geo.
+        const res = await politeFetch(
+          `${productUrl(asin)}?language=de_DE`,
+          { headers: { Accept: "text/html", "Accept-Language": "de-AT,de;q=0.9" } },
+          fetchFn,
+        );
+        const { status, priceCents } = parseAmazon(await res.text());
+        perColour.push({ asin, priceCents, inStock: status === "in_stock" });
+      }
+      // Available if any colour is buyable; link + price from the cheapest in-stock colour,
+      // else fall back to the primary colour's link (out of stock, no price).
+      const cheapest = perColour
+        .filter((c) => c.inStock)
+        .sort((a, b) => (a.priceCents ?? Infinity) - (b.priceCents ?? Infinity))[0];
+      offers.push({
+        variant: product.variant,
+        url: productUrl(cheapest?.asin ?? product.asins[0]),
+        priceCents: cheapest?.priceCents ?? null,
+        status: cheapest ? "in_stock" : "out_of_stock",
+      });
     }
     return { retailerSlug: "amazon", offers, storeStock: null };
   },

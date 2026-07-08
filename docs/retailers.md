@@ -54,7 +54,7 @@ accessibility statements refer to plain Node `fetch` with browser-like headers
 
 ## Amazon (amazon.de)
 
-- ASINs: `B0GX16LKSC` = PortaSplit-E 12.000 BTU (Kühlen+Heizen) → `portasplit`; `B0GXDWTFR5` = PortaSplit Cool 8.000 BTU → `portasplit-cool`. (amazon.at is a marginal storefront; AT shoppers use amazon.de.)
+- ASINs: `portasplit` = 12.000 BTU PortaSplit-E (Kühlen+Heizen), **two colours**: `B0GX16LKSC` (Pfirsich) + `B0D3PP64JS` (Grau) — the twister `dimensionValuesDisplayData` lists exactly these two. `portasplit-cool` = `B0GXDWTFR5` (8.000 BTU, single colour). A variant is available if **any** of its colour ASINs has a featured offer; price + deep link come from the cheapest in-stock colour. (amazon.at is a marginal storefront; AT shoppers use amazon.de.)
 - **Availability = featured offer (buy box) only.** Signal: the presence of `id="add-to-cart-button"` on the PDP. Price = the first `a-offscreen` inside `#corePrice_feature_div` / `#corePriceDisplay_desktop_feature_div`. No JSON-LD; parsing is regex over the ~2 MB HTML.
 - **Marketplace/"other sellers" offers are deliberately ignored.** For this product they're only inflated third-party "Collectible – Like New" resellers (~€1.800 vs ~€750 retail); counting them would fire misleading restock alerts. Amazon's own `"No featured offers available"` string is **unreliable** (present even on in-stock pages, in a hidden AOD widget) — hence the add-to-cart signal, verified against an in-stock reference product (2026-07-08).
 - **Block guard:** a CAPTCHA/robot-check page has no `id="productTitle"` → the adapter throws (poller backs off / markUnknown) rather than reporting a false `out_of_stock`.
