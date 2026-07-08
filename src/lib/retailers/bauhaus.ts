@@ -1,4 +1,4 @@
-import { fetchBauhausOnlineStock, fetchBauhausStoreStock } from "./bauhaus-stores";
+import { fetchBauhausOnlineStock, fetchBauhausPrice, fetchBauhausStoreStock } from "./bauhaus-stores";
 import { politeFetch } from "./fetch";
 import { parseProductLd } from "./jsonld";
 import type { RetailerAdapter, StockStatus, StoreStock } from "./types";
@@ -57,6 +57,16 @@ export const bauhausAdapter: RetailerAdapter = {
     // poller backs off / marks unknown rather than reporting a bogus "out of stock".
     if (online == null && !storeStock) {
       throw new Error("bauhaus: api.bauhaus unreachable — online + store sweep both failed (check BAUHAUS_API_KEY)");
+    }
+
+    // Price: from the PDP JSON-LD when we fetched it; otherwise (env-key mode, PDP
+    // skipped) best-effort via the api.bauhaus recommendation widget — Cloudflare-free.
+    // Availability never depends on it, so a miss just leaves the price blank.
+    if (priceCents == null) {
+      priceCents = await fetchBauhausPrice(fetchFn, apiKey).catch((err) => {
+        console.error("bauhaus: price lookup failed:", err);
+        return null;
+      });
     }
 
     const status: StockStatus =

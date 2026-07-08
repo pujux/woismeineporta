@@ -53,12 +53,20 @@ describe("bauhausAdapter", () => {
     expect(result.storeStock).toHaveLength(23);
   });
 
-  it("skips the PDP entirely when BAUHAUS_API_KEY is set (price null, status from api)", async () => {
+  it("skips the PDP entirely when BAUHAUS_API_KEY is set — status, stores AND price from api.bauhaus", async () => {
     process.env.BAUHAUS_API_KEY = "envkey";
     const fetchFn = vi.fn(async (input: RequestInfo | URL) => {
       const url = String(input);
       if (url.includes("www.bauhaus.at")) throw new Error("PDP must not be fetched when BAUHAUS_API_KEY is set");
-      return new Response(OUT_OF_STOCK, { status: 200 });
+      // Price comes from the recommendation widget: hop 1 seeds our product (→ accessory),
+      // hop 2 seeds the accessory whose recommendations include us with priceInfo.
+      if (url.includes("product-recommendation")) {
+        const results = url.includes("product-id=31934233")
+          ? [{ id: "ACC1" }]
+          : [{ id: "31934233", metadata: { product: { priceInfo: { price: 749 } } } }];
+        return new Response(JSON.stringify([{ results }]), { status: 200 });
+      }
+      return new Response(OUT_OF_STOCK, { status: 200 }); // online + per-store
     }) as unknown as typeof fetch;
 
     const result = await bauhausAdapter.check(fetchFn);
@@ -66,7 +74,7 @@ describe("bauhausAdapter", () => {
       {
         variant: "portasplit",
         url: "https://www.bauhaus.at/klimaanlagen/midea-klimasplitgeraet-portasplit-12000-btu/p/31934233",
-        priceCents: null,
+        priceCents: 74900,
         status: "out_of_stock",
       },
     ]);

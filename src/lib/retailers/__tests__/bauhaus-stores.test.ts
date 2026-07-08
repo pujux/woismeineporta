@@ -2,6 +2,7 @@ import { describe, expect, it, vi } from "vitest";
 import { AdapterHttpError } from "@/lib/retailers/fetch";
 import {
   fetchBauhausOnlineStock,
+  fetchBauhausPrice,
   fetchBauhausStoreStock,
   parseStock,
 } from "@/lib/retailers/bauhaus-stores";
@@ -48,6 +49,36 @@ describe("fetchBauhausOnlineStock (no-warehouse product-stock = online orderabil
   it("throws on 401/403 so the adapter can degrade", async () => {
     const fetchFn = vi.fn(async () => new Response("nope", { status: 403 })) as unknown as typeof fetch;
     await expect(fetchBauhausOnlineStock(fetchFn, "bad")).rejects.toBeInstanceOf(AdapterHttpError);
+  });
+});
+
+describe("fetchBauhausPrice (2-hop recommendation-widget back-reference)", () => {
+  // The recommendation widget carries priceInfo but never lists the seed itself, so the
+  // product's price is read off an accessory that cross-recommends back to it.
+  const rec = (results: unknown[]) => new Response(JSON.stringify([{ results }]), { status: 200 });
+
+  it("seeds the product's own recommendations, then reads its price off the back-reference", async () => {
+    const fetchFn = vi.fn(async (input: RequestInfo | URL) => {
+      const url = String(input);
+      if (url.includes("product-id=31934233")) return rec([{ id: "ACCESSORY1" }, { id: "ACCESSORY2" }]);
+      if (url.includes("product-id=ACCESSORY1")) {
+        return rec([{ id: "31934233", metadata: { product: { priceInfo: { price: 749 } } } }]);
+      }
+      return rec([]);
+    }) as unknown as typeof fetch;
+
+    await expect(fetchBauhausPrice(fetchFn, "pubkey")).resolves.toBe(74900);
+
+    const calls = (fetchFn as unknown as { mock: { calls: [string, RequestInit][] } }).mock.calls;
+    expect(String(calls[0][0])).toContain("/v1/product-recommendation/4/at/webshop/product-detail-page");
+    expect(new Headers(calls[0][1].headers).get("apikey")).toBe("pubkey");
+  });
+
+  it("returns null when the product never surfaces in any accessory's recommendations", async () => {
+    const fetchFn = vi.fn(async (input: RequestInfo | URL) =>
+      String(input).includes("product-id=31934233") ? rec([{ id: "ACCESSORY1" }]) : rec([{ id: "SOMETHING_ELSE" }]),
+    ) as unknown as typeof fetch;
+    await expect(fetchBauhausPrice(fetchFn, "pubkey")).resolves.toBeNull();
   });
 });
 
