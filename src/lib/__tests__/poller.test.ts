@@ -197,6 +197,49 @@ describe("runTick", () => {
     expect(emails).toEqual(["confirmed-old@x.at", "fresh@x.at"]);
   });
 
+  it("emails the owner when an adapter crosses the failure threshold, then on recovery", async () => {
+    const state = createPollerState();
+    const ownerNotify = vi.fn().mockResolvedValue(true);
+    let fail = true;
+    const flaky = fakeAdapter("obi", "fast", async () => {
+      if (fail) throw new Error("down");
+      return okResult("obi");
+    });
+    const opts = { adapterList: [flaky], notify, ownerNotify, state, fastMs: 30_000, slowMs: 180_000 };
+
+    await runTick(db, { ...opts, now: 0 });
+    await runTick(db, { ...opts, now: 30_000 });
+    expect(ownerNotify).not.toHaveBeenCalled(); // 2 failures: not yet
+    await runTick(db, { ...opts, now: 60_000 }); // 3rd failure → alert
+    expect(ownerNotify).toHaveBeenCalledOnce();
+    expect(ownerNotify.mock.calls[0][0]).toContain("obi");
+
+    await runTick(db, { ...opts, now: 90_000 }); // still down, within re-alert window → no repeat
+    expect(ownerNotify).toHaveBeenCalledOnce();
+
+    fail = false;
+    await runTick(db, { ...opts, now: 120_000 }); // recovered → one more (recovery) mail
+    expect(ownerNotify).toHaveBeenCalledTimes(2);
+    expect(ownerNotify.mock.calls[1][0]).toMatch(/ok|wieder/i);
+  });
+
+  it("re-alerts the owner after the re-alert window while still down", async () => {
+    const state = createPollerState();
+    const ownerNotify = vi.fn().mockResolvedValue(true);
+    const dead = fakeAdapter("obi", "slow", async () => {
+      throw new Error("down");
+    });
+    const sixHoursOneTick = 6 * 3_600_000 + 200_000;
+    const opts = { adapterList: [dead], notify, ownerNotify, state, fastMs: 30_000, slowMs: 180_000 };
+
+    await runTick(db, { ...opts, now: 0 });
+    await runTick(db, { ...opts, now: 200_000 });
+    await runTick(db, { ...opts, now: 400_000 }); // 3rd failure → first alert
+    expect(ownerNotify).toHaveBeenCalledOnce();
+    await runTick(db, { ...opts, now: 400_000 + sixHoursOneTick }); // past re-alert window
+    expect(ownerNotify).toHaveBeenCalledTimes(2);
+  });
+
   it("writes a check_runs row per tick", async () => {
     await runTick(db, { adapterList: [fakeAdapter("obi", "fast")], notify, state: createPollerState(), now: 1000, fastMs: 30_000, slowMs: 180_000 });
     const runs = await db.getRepository(CheckRunEntity).find();
