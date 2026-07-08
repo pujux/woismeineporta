@@ -1,5 +1,6 @@
 import { CheckRunEntity, EmailSubscriptionEntity, EventEntity, NotificationLogEntity, type AppDb } from "@/db";
 import { getDb } from "@/db";
+import { checkCoverage } from "./coverage-watch";
 import { computeDiff } from "./diff";
 import { emitChange } from "./live-bus";
 import { notifyOwner, type OwnerNotify } from "./notify/health";
@@ -198,4 +199,16 @@ export function startPoller(): void {
 
   void tick();
   setInterval(tick, fastMs);
+
+  // Coverage watch: wake hourly, but each shop is only re-checked once a day (gated
+  // inside checkCoverage). Separate from the tick loop and prod-only.
+  const coverage = async () => {
+    try {
+      await checkCoverage(await getDb(), impitFetch, notifyOwner, Date.now());
+    } catch (err) {
+      console.error("[coverage-watch] failed:", err);
+    }
+  };
+  void coverage();
+  setInterval(coverage, 3_600_000);
 }

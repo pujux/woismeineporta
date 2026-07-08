@@ -249,6 +249,25 @@ export const NotificationLogEntity = new EntitySchema<NotificationLogRow>({
   ],
 });
 
+// Coverage-watch: tracks whether a not-yet-integrated shop has started listing the
+// PortaSplit, so the owner gets pinged once when it appears. One row per probe.
+export interface CoverageWatchRow {
+  key: string;
+  present: boolean;
+  lastCheckedAt: number;
+  lastChangedAt: number;
+}
+export const CoverageWatchEntity = new EntitySchema<CoverageWatchRow>({
+  name: "coverage_watch",
+  tableName: "coverage_watch",
+  columns: {
+    key: { type: "text", primary: true },
+    present: { type: "boolean" },
+    lastCheckedAt: { type: "integer", name: "last_checked_at" },
+    lastChangedAt: { type: "integer", name: "last_changed_at" },
+  },
+});
+
 export const allEntities = [
   VariantEntity,
   RetailerEntity,
@@ -260,4 +279,5 @@ export const allEntities = [
   EmailSubscriptionEntity,
   CheckRunEntity,
   NotificationLogEntity,
+  CoverageWatchEntity,
 ];
