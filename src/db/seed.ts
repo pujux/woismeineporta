@@ -15,6 +15,7 @@ export async function seed(db: DataSource): Promise<void> {
       { slug: "obi", name: "OBI", homepage: "https://www.obi.at" },
       { slug: "mediamarkt", name: "MediaMarkt", homepage: "https://www.mediamarkt.at" },
       { slug: "tepto", name: "Tepto", homepage: "https://www.tepto.at" },
+      { slug: "amazon", name: "Amazon", homepage: "https://www.amazon.de" },
     ],
     ["slug"],
   );
@@ -51,6 +52,16 @@ export async function seed(db: DataSource): Promise<void> {
       retailerSlug: "tepto",
       variantSlug: "portasplit",
       url: "https://www.tepto.at/Midea-Klimageraet-PortaSplit",
+    },
+    {
+      retailerSlug: "amazon",
+      variantSlug: "portasplit",
+      url: "https://www.amazon.de/dp/B0GX16LKSC",
+    },
+    {
+      retailerSlug: "amazon",
+      variantSlug: "portasplit-cool",
+      url: "https://www.amazon.de/dp/B0GXDWTFR5",
     },
   ];
   await db
