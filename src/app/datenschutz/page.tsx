@@ -27,12 +27,13 @@ export default function Datenschutz() {
         </section>
 
         <section>
-          <h2 className="font-semibold text-slate-900 dark:text-slate-100">Cookies &amp; Tracking</h2>
+          <h2 className="font-semibold text-slate-900 dark:text-slate-100">Cookies &amp; Reichweitenmessung</h2>
           <p>
-            Diese Website setzt selbst keine Cookies und verwendet keine Analyse- oder Tracking-Dienste. Technisch notwendig kann lediglich unser
-            Sicherheits-/CDN-Dienstleister Cloudflare ein Cookie zur Bot-Abwehr setzen (<code>__cf_bm</code>, kurze Laufzeit) — siehe Abschnitt
-            „Content-Delivery-Network (Cloudflare)“. Beim Aufruf werden die technisch notwendigen Zugriffsdaten (IP-Adresse, Zeitpunkt, abgerufene
-            Seite) in Server-Logs verarbeitet (Art. 6 Abs. 1 lit. f DSGVO) und nach kurzer Zeit gelöscht.
+            Diese Website setzt selbst keine Cookies und verwendet keine Cookie-basierten Analyse- oder Werbe-Tracker. Zur Reichweitenmessung läuft
+            lediglich die <strong>cookielose</strong> Web-Analyse von Cloudflare (aggregierte Aufrufzahlen, kein geräteübergreifendes Tracking, keine
+            Profilbildung) — siehe Abschnitt „Content-Delivery-Network (Cloudflare)“. Technisch notwendig kann Cloudflare zudem ein Cookie zur
+            Bot-Abwehr setzen (<code>__cf_bm</code>, kurze Laufzeit). Beim Aufruf werden die technisch notwendigen Zugriffsdaten (IP-Adresse,
+            Zeitpunkt, abgerufene Seite) in Server-Logs verarbeitet (Art. 6 Abs. 1 lit. f DSGVO) und nach kurzer Zeit gelöscht.
           </p>
         </section>
 
@@ -94,6 +95,12 @@ export default function Datenschutz() {
               Cloudflare Datenschutzerklärung
             </a>
             .
+          </p>
+          <p className="mt-2">
+            Zusätzlich ist <strong>Cloudflare Web Analytics</strong> aktiv — eine cookielose Reichweitenmessung, die über ein kleines Skript
+            (<code>static.cloudflareinsights.com</code>) aggregierte Kennzahlen wie Seitenaufrufe und Herkunft erhebt. Sie verwendet keine Cookies,
+            kein Fingerprinting und kein geräte- oder seitenübergreifendes Tracking; es werden keine personenbezogenen Profile gebildet.
+            Rechtsgrundlage: berechtigtes Interesse an einer datensparsamen Reichweitenmessung (Art. 6 Abs. 1 lit. f DSGVO).
           </p>
         </section>
 
