@@ -4,15 +4,17 @@ const isProd = process.env.NODE_ENV === "production";
 
 // Content-Security-Policy. 'unsafe-inline' is required for Next's inline bootstrap
 // scripts + our JSON-LD, and for Leaflet's inline style attributes; external scripts
-// are still restricted to same-origin. Only applied in production — in dev it would
-// block Turbopack's HMR (eval + websocket). Tiles come from OpenStreetMap.
+// are otherwise restricted to same-origin. Only applied in production — in dev it would
+// block Turbopack's HMR (eval + websocket). Tiles come from OpenStreetMap. Cloudflare
+// (our proxy) auto-injects its cookieless Web Analytics beacon from
+// static.cloudflareinsights.com, which POSTs metrics back to cloudflareinsights.com.
 const csp = [
   "default-src 'self'",
-  "script-src 'self' 'unsafe-inline'",
+  "script-src 'self' 'unsafe-inline' https://static.cloudflareinsights.com",
   "style-src 'self' 'unsafe-inline'",
   "img-src 'self' data: https://tile.openstreetmap.org https://*.tile.openstreetmap.org",
   "font-src 'self'",
-  "connect-src 'self'",
+  "connect-src 'self' https://cloudflareinsights.com",
   "worker-src 'self'",
   "manifest-src 'self'",
   "base-uri 'self'",
