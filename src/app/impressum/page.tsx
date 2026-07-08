@@ -46,7 +46,7 @@ export default function Impressum() {
         <section>
           <h2 className="font-semibold text-slate-900 dark:text-slate-100">Hinweis</h2>
           <p>
-            Diese Website ist kein Online-Shop und steht in keiner Verbindung zu Midea, BAUHAUS, OBI, MediaMarkt oder Tepto. Alle Marken sind Eigentum
+            Diese Website ist kein Online-Shop und steht in keiner Verbindung zu Midea, BAUHAUS, OBI, MediaMarkt, Tepto oder Amazon. Alle Marken sind Eigentum
             ihrer jeweiligen Inhaber. Alle Angaben ohne Gewähr; Preise und Verfügbarkeiten können abweichen.
           </p>
         </section>
