@@ -41,9 +41,11 @@ const nextConfig: NextConfig = {
     return [
       { source: "/:path*", headers: securityHeaders },
       {
-        // Icons never change (content-stable) — cache for 30 days.
-        source: "/:icon(icon-192.png|icon-512.png)",
-        headers: [{ key: "Cache-Control", value: "public, max-age=2592000" }],
+        // Icons are versioned in their filename (icon-512-v2.png, …) so a changed
+        // icon is a NEW URL — safe to cache long, and updates propagate instantly
+        // without a cache purge. Matches any icon-*.png.
+        source: "/:icon(icon-.*\\.png)",
+        headers: [{ key: "Cache-Control", value: "public, max-age=2592000, immutable" }],
       },
       {
         source: "/manifest.webmanifest",
