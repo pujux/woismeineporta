@@ -1,6 +1,7 @@
 import { EventEntity, OfferEntity, RetailerEntity, StoreAvailabilityEntity, StoreEntity, VariantEntity, type AppDb } from "@/db";
 import { distanceKm, plzToLatLng } from "./geo";
 import type { StockStatus, VariantSlug } from "./retailers/types";
+import { computeOfferHistory, HISTORY_WINDOW_MS, type HistoryEvent, type OfferHistory } from "./stats";
 
 export interface VariantStatus {
   variant: { slug: VariantSlug; name: string; uvpCents: number };
@@ -13,13 +14,31 @@ export interface VariantStatus {
     pickupNote: string | null;
     lastCheckedAt: number;
     lastChangedAt: number;
+    history: OfferHistory;
   }>;
 }
 
-export async function getVariantStatuses(db: AppDb): Promise<VariantStatus[]> {
+export async function getVariantStatuses(db: AppDb, now: number = Date.now()): Promise<VariantStatus[]> {
   const variants = await db.getRepository(VariantEntity).find();
   const retailers = new Map((await db.getRepository(RetailerEntity).find()).map((r) => [r.slug, r]));
   const offers = await db.getRepository(OfferEntity).find();
+
+  // Online events (store_id IS NULL) within the history window, grouped per offer.
+  const evRows = await db
+    .getRepository(EventEntity)
+    .createQueryBuilder("e")
+    .where("e.created_at >= :start", { start: now - HISTORY_WINDOW_MS })
+    .andWhere("e.store_id IS NULL")
+    .getMany();
+  const eventsByOffer = new Map<string, HistoryEvent[]>();
+  for (const e of evRows) {
+    const key = `${e.retailerSlug}:${e.variantSlug}`;
+    (eventsByOffer.get(key) ?? eventsByOffer.set(key, []).get(key)!).push({
+      type: e.type,
+      priceCents: e.priceCents,
+      createdAt: e.createdAt,
+    });
+  }
 
   return variants.map((variant) => ({
     variant: {
@@ -38,6 +57,11 @@ export async function getVariantStatuses(db: AppDb): Promise<VariantStatus[]> {
         pickupNote: o.pickupNote,
         lastCheckedAt: o.lastCheckedAt,
         lastChangedAt: o.lastChangedAt,
+        history: computeOfferHistory(
+          eventsByOffer.get(`${o.retailerSlug}:${o.variantSlug}`) ?? [],
+          { status: o.status, priceCents: o.priceCents, lastChangedAt: o.lastChangedAt },
+          now,
+        ),
       }))
       .sort((a, b) => a.retailerName.localeCompare(b.retailerName)),
   }));

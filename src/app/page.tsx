@@ -17,14 +17,15 @@ export const dynamic = "force-dynamic";
 
 export default async function Home() {
   const db = await getDb();
-  const [statuses, events] = await Promise.all([
-    singleflight("variant-statuses", () => getVariantStatuses(db)),
-    singleflight("recent-events:60", () => getRecentEvents(db, 60)),
-  ]);
   // Dynamic (force-dynamic) server component: renders once per request, so a
-  // fresh timestamp here is intended — this is the "now" for initial relative times.
+  // fresh timestamp here is intended — this is the "now" for initial relative times
+  // and the history window.
   // eslint-disable-next-line react-hooks/purity
   const now = Date.now();
+  const [statuses, events] = await Promise.all([
+    singleflight("variant-statuses", () => getVariantStatuses(db, now)),
+    singleflight("recent-events:60", () => getRecentEvents(db, 60)),
+  ]);
   const anyInStock = statuses.some((s) => s.offers.some((o) => o.status === "in_stock"));
   const jsonLd = [...buildProductJsonLd(statuses, BASE_URL), buildFaqJsonLd(FAQ_ITEMS)];
 
