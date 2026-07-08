@@ -13,7 +13,8 @@ function parseAddress(v: string): { name?: string; email: string } {
 
 // Brevo (Sendinblue) transactional API — plain fetch, no SDK dependency (Node has
 // global fetch). Sender domain must be authenticated in Brevo (SPF/DKIM/DMARC).
-const defaultSend: SendFn = async (to, subject, html) => {
+// Exported so other channels (owner/health alerts) can reuse the same sender.
+export const brevoSend: SendFn = async (to, subject, html) => {
   const apiKey = process.env.BREVO_API_KEY;
   if (!apiKey) throw new Error("BREVO_API_KEY not set");
   const res = await fetch("https://api.brevo.com/v3/smtp/email", {
@@ -58,7 +59,7 @@ async function sendConfirmMail(send: SendFn, email: string, confirmToken: string
 export async function createEmailSubscription(
   db: AppDb,
   input: { email: string; variantSlugs: string[]; zip?: string; radiusKm?: number },
-  send: SendFn = defaultSend,
+  send: SendFn = brevoSend,
   now: number = Date.now(),
 ): Promise<"created" | "resent" | "invalid"> {
   const email = input.email?.trim().toLowerCase();
@@ -137,7 +138,7 @@ export async function sendAlertEmail(
   subscriptionId: number,
   subject: string,
   html: string,
-  send: SendFn = defaultSend,
+  send: SendFn = brevoSend,
 ): Promise<"sent" | "failed"> {
   const row = await db.getRepository(EmailSubscriptionEntity).findOneBy({ id: subscriptionId });
   if (!row) return "failed";

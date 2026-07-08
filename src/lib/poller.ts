@@ -2,6 +2,7 @@ import { CheckRunEntity, EmailSubscriptionEntity, EventEntity, NotificationLogEn
 import { getDb } from "@/db";
 import { computeDiff } from "./diff";
 import { emitChange } from "./live-bus";
+import { notifyOwner, type OwnerNotify } from "./notify/health";
 import { notifyEvents } from "./notify/orchestrator";
 import { AdapterHttpError } from "./retailers/fetch";
 import { impitFetch } from "./retailers/impit-fetch";
@@ -20,6 +21,10 @@ interface AdapterState {
   lastRunAt: number;
   consecutiveFailures: number;
   backoffMs: number;
+  /** When the current failure streak started (undefined = healthy). */
+  failingSince?: number;
+  /** When we last emailed the owner about the current outage (for re-alert debounce). */
+  alertedAt?: number;
 }
 
 export type PollerState = Map<string, AdapterState>;
@@ -30,6 +35,22 @@ export function createPollerState(): PollerState {
 
 const MAX_BACKOFF_MS = 30 * 60_000;
 const FAILURES_BEFORE_UNKNOWN = 3;
+// Once an adapter is flagged unhealthy, re-email the owner at most this often while
+// it stays down (so a persistent outage nags but doesn't spam).
+const HEALTH_REALERT_MS = 6 * 3_600_000;
+
+function fmtDuration(ms: number): string {
+  const min = Math.round(ms / 60_000);
+  if (min < 60) return `${min} Min`;
+  const h = Math.floor(min / 60);
+  return `${h} Std ${min % 60} Min`;
+}
+
+function healthAlertHtml(slug: string, failures: number, failingSince: number, error: string, now: number): string {
+  return `<p>Der Adapter <b>${slug}</b> liefert seit ${fmtDuration(now - failingSince)} keine Daten (${failures} Fehlversuche in Folge).</p>
+    <p>Die Angebote wurden auf „unbekannt" gesetzt. Letzter Fehler:</p>
+    <pre style="white-space:pre-wrap;font-size:12px;background:#f4f4f5;padding:8px;border-radius:6px">${error}</pre>`;
+}
 const HOUSEKEEPING_EVERY = 100;
 const EVENT_RETENTION_MS = 90 * 24 * 3_600_000;
 const CHECK_RUN_RETENTION_MS = 7 * 24 * 3_600_000;
@@ -59,6 +80,7 @@ interface TickOptions {
   adapterList?: RetailerAdapter[];
   fetchFn?: typeof fetch;
   notify?: typeof notifyEvents;
+  ownerNotify?: OwnerNotify;
   state?: PollerState;
   fastMs?: number;
   slowMs?: number;
@@ -80,6 +102,7 @@ export async function runTick(db: AppDb, opts: TickOptions): Promise<TickSummary
     adapterList = adapters,
     fetchFn = impitFetch,
     notify = notifyEvents,
+    ownerNotify = notifyOwner,
     state = globalState,
     fastMs = envInt("POLL_FAST_MS", 30_000),
     slowMs = envInt("POLL_SLOW_MS", 180_000),
@@ -99,18 +122,36 @@ export async function runTick(db: AppDb, opts: TickOptions): Promise<TickSummary
       const events = computeDiff(await loadPrevState(db, adapter.slug), result);
       await persistResult(db, result, events, now);
       await notify(db, events, now);
+      // Recovered from an outage we'd alerted on → tell the owner it's back.
+      if (st.alertedAt) {
+        await ownerNotify(
+          `✅ Adapter „${adapter.slug}" wieder ok`,
+          `<p>Der Adapter <b>${adapter.slug}</b> liefert nach ${fmtDuration(now - (st.failingSince ?? now))} wieder Daten.</p>`,
+        );
+      }
       st.consecutiveFailures = 0;
       st.backoffMs = 0;
+      st.failingSince = undefined;
+      st.alertedAt = undefined;
       summary.ran.push(adapter.slug);
       summary.events += events.length;
     } catch (err) {
       st.consecutiveFailures++;
+      if (st.consecutiveFailures === 1) st.failingSince = now;
       summary.errors[adapter.slug] = String(err).slice(0, 300);
       if (err instanceof AdapterHttpError && (err.status === 403 || err.status === 429)) {
         st.backoffMs = Math.min(st.backoffMs > 0 ? st.backoffMs * 2 : interval * 2, MAX_BACKOFF_MS);
       }
       if (st.consecutiveFailures >= FAILURES_BEFORE_UNKNOWN) {
         await markUnknown(db, adapter.slug, now);
+        // Email the owner once per outage, then at most every HEALTH_REALERT_MS.
+        if (st.alertedAt === undefined || now - st.alertedAt >= HEALTH_REALERT_MS) {
+          st.alertedAt = now;
+          await ownerNotify(
+            `⚠️ Adapter „${adapter.slug}" liefert keine Daten`,
+            healthAlertHtml(adapter.slug, st.consecutiveFailures, st.failingSince ?? now, summary.errors[adapter.slug], now),
+          );
+        }
       }
     }
     state.set(adapter.slug, st);
