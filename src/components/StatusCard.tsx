@@ -1,6 +1,21 @@
 import { formatPrice, formatRelativeTime } from "@/lib/format";
 import type { VariantStatus } from "@/lib/queries";
 import { RelativeTime } from "./RelativeTime";
+import { Sparkline } from "./Sparkline";
+
+/** One concise history line from the offer's stats, or null when there's nothing to say. */
+function historyLine(offer: VariantStatus["offers"][number], now: number): string | null {
+  const { history: h, status } = offer;
+  const parts: string[] = [];
+  if (status !== "in_stock" && h.lastInStockAt) parts.push(`zuletzt lagernd ${formatRelativeTime(h.lastInStockAt, now)}`);
+  if (h.uptimePct !== null && h.observedDays >= 1) {
+    const span = h.observedDays >= 25 ? "30 T" : `${Math.round(h.observedDays)} T`;
+    parts.push(`${Math.round(h.uptimePct)}% lagernd (${span})`);
+  } else if (h.restockCount > 0) {
+    parts.push(`${h.restockCount}× lagernd (30 T)`);
+  }
+  return parts.length ? parts.join(" · ") : null;
+}
 
 const STATUS_META = {
   in_stock: {
@@ -31,6 +46,7 @@ const STATUS_META = {
 
 export function StatusCard({ offer, now }: Readonly<{ offer: VariantStatus["offers"][number]; now: number }>) {
   const meta = STATUS_META[offer.status];
+  const history = historyLine(offer, now);
 
   return (
     <a
@@ -46,6 +62,7 @@ export function StatusCard({ offer, now }: Readonly<{ offer: VariantStatus["offe
         </span>
         <p className="mt-1.5 font-medium text-slate-900 dark:text-slate-100">{offer.retailerName}</p>
         {offer.pickupNote && <p className="mt-0.5 text-xs text-sky-700 dark:text-sky-400">{offer.pickupNote}</p>}
+        {history && <p className="mt-0.5 text-xs text-slate-500 dark:text-slate-400">{history}</p>}
         <p className="mt-auto pt-2 text-xs text-slate-500 dark:text-slate-400">
           {offer.lastCheckedAt === 0 ? (
             "noch nicht geprüft"
@@ -56,9 +73,10 @@ export function StatusCard({ offer, now }: Readonly<{ offer: VariantStatus["offe
           )}
         </p>
       </div>
-      <div className="flex shrink-0 flex-col justify-center text-right">
+      <div className="flex shrink-0 flex-col items-end justify-center text-right">
         <div className={`tabular-nums ${meta.priceClass}`}>{formatPrice(offer.priceCents)}</div>
-        <div className={`text-xs ${meta.ctaClass}`}>{meta.cta}</div>
+        {offer.history.pricePoints.length >= 2 && <Sparkline points={offer.history.pricePoints} className="mt-0.5" />}
+        <div className={`mt-0.5 text-xs ${meta.ctaClass}`}>{meta.cta}</div>
       </div>
     </a>
   );
