@@ -38,6 +38,13 @@ auf einem Volume — keine weiteren Dienste (kein Redis, keine DB, kein Headless
 | BAUHAUS    | ✓                  | ✓ je Filiale (23 Fachcentren, öffentliche api.bauhaus) |
 | MediaMarkt | ✓                  | nur Sammelsignal („in einzelnen Märkten abholbar")   |
 | Tepto      | ✓ (nur PortaSplit) | —                                                    |
+| Amazon     | ✓ (nur Featured Offer / Buy Box) | —                                      |
+
+Amazon.de führt beide Varianten, hat sie aber selten selbst am Lager — meist nur überteuerte
+Drittanbieter („Collectible – Like New", ~€1.800). Als verfügbar zählt daher **nur das Featured
+Offer (Buy Box)**; die Marketplace-Angebote werden ignoriert, sonst gäbe es irreführende
+Alarme. Kommt der Server-IP eine CAPTCHA-Seite zurück, meldet der Adapter `unknown` statt
+falscher Verfügbarkeit.
 
 BAUHAUS und MediaMarkt sind Cloudflare-geschützt. Bei BAUHAUS kommen **Online-Status,
 Filialbestand und Preis** ohne Headless-Browser über die öffentliche `api.bauhaus`

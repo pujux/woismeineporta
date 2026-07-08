@@ -12,6 +12,7 @@ accessibility statements refer to plain Node `fetch` with browser-like headers
 | MediaMarkt | ✓ PDP JSON-LD + `onlineStatus` | aggregate pickup signal only (per-store API blocked) | PDP works, GraphQL 403 (Akamai) |
 | Tepto | ✓ PDP JSON-LD (base variant only) | — | works |
 | BAUHAUS | ✓ api.bauhaus `product-stock` (no warehouse) | ✓ 23 AT Fachcentren, per-store availability | everything (status, stores, price) via `api.bauhaus` — not Cloudflare; PDP no longer required |
+| Amazon | ✓ featured offer (buy box) only | — | PDP fetch works via impit from residential; **datacenter IPs may get CAPTCHA'd** |
 | Hornbach | — | — | **dropped: does not sell the PortaSplit in Austria** (0 search results on hornbach.at) |
 
 ## OBI (obi.at)
@@ -51,6 +52,14 @@ accessibility statements refer to plain Node `fetch` with browser-like headers
 - **apiKey scope (mapped 2026-07-08):** authorized → `product-stock`, `product-recommendation/3,4`, `product-masterdata/3` (but needs a PIM code we can't resolve), `search-suggestions` (but needs a catalog `language_id` we can't determine, 0–80 all "not valid"). OAuth-only (401 invalid access token) → `product-price`, `product-pricing`, `prices`, `product-batch`, `product/products`. Not scoped for this key (401 invalid apiKey for resource) → `product-category`, `assets-masterdata`.
 - No Cool variant on bauhaus.at (only the 12.000 BTU model).
 
+## Amazon (amazon.de)
+
+- ASINs: `B0GX16LKSC` = PortaSplit-E 12.000 BTU (Kühlen+Heizen) → `portasplit`; `B0GXDWTFR5` = PortaSplit Cool 8.000 BTU → `portasplit-cool`. (amazon.at is a marginal storefront; AT shoppers use amazon.de.)
+- **Availability = featured offer (buy box) only.** Signal: the presence of `id="add-to-cart-button"` on the PDP. Price = the first `a-offscreen` inside `#corePrice_feature_div` / `#corePriceDisplay_desktop_feature_div`. No JSON-LD; parsing is regex over the ~2 MB HTML.
+- **Marketplace/"other sellers" offers are deliberately ignored.** For this product they're only inflated third-party "Collectible – Like New" resellers (~€1.800 vs ~€750 retail); counting them would fire misleading restock alerts. Amazon's own `"No featured offers available"` string is **unreliable** (present even on in-stock pages, in a hidden AOD widget) — hence the add-to-cart signal, verified against an in-stock reference product (2026-07-08).
+- **Block guard:** a CAPTCHA/robot-check page has no `id="productTitle"` → the adapter throws (poller backs off / markUnknown) rather than reporting a false `out_of_stock`.
+- **Server-side access caveat:** PDPs fetch fine via impit from a residential IP, but Amazon aggressively CAPTCHAs **datacenter** IPs. If prod gets blocked, it likely needs WARP/a residential proxy (like MediaMarkt). Amazon has never stocked the PortaSplit first-party, so this mostly sits at `out_of_stock` — but it will catch a genuine featured offer if one ever appears.
+
 ## Fixtures (`src/lib/retailers/__fixtures__/`)
 
 - `obi-stores.json` — real store directory (79 stores)
@@ -60,5 +69,6 @@ accessibility statements refer to plain Node `fetch` with browser-like headers
 - `mediamarkt-pdp-portasplit{,-cool}.html` — real PDPs
 - `tepto-pdp-portasplit.html` — real PDP
 - `bauhaus-pdp-portasplit-synthetic.html` — minimal HTML wrapping the real JSON-LD
+- `amazon-pdp-{instock,oos}-synthetic.html` — minimal HTML with the parser-relevant markers (add-to-cart / core price / scalper offer)
 
-Variant coverage per retailer: OBI both; MediaMarkt both; Tepto base only; Bauhaus base only.
+Variant coverage per retailer: OBI both; MediaMarkt both; Tepto base only; Bauhaus base only; Amazon both.
