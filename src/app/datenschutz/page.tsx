@@ -27,11 +27,12 @@ export default function Datenschutz() {
         </section>
 
         <section>
-          <h2 className="font-semibold text-slate-900 dark:text-slate-100">Keine Cookies, kein Tracking</h2>
+          <h2 className="font-semibold text-slate-900 dark:text-slate-100">Cookies &amp; Tracking</h2>
           <p>
-            Diese Website setzt keine Cookies und verwendet keine Analyse- oder Tracking-Dienste. Beim Aufruf werden die technisch notwendigen
-            Zugriffsdaten (IP-Adresse, Zeitpunkt, abgerufene Seite) in Server-Logs verarbeitet (Art. 6 Abs. 1 lit. f DSGVO) und nach kurzer Zeit
-            gelöscht.
+            Diese Website setzt selbst keine Cookies und verwendet keine Analyse- oder Tracking-Dienste. Technisch notwendig kann lediglich unser
+            Sicherheits-/CDN-Dienstleister Cloudflare ein Cookie zur Bot-Abwehr setzen (<code>__cf_bm</code>, kurze Laufzeit) — siehe Abschnitt
+            „Content-Delivery-Network (Cloudflare)“. Beim Aufruf werden die technisch notwendigen Zugriffsdaten (IP-Adresse, Zeitpunkt, abgerufene
+            Seite) in Server-Logs verarbeitet (Art. 6 Abs. 1 lit. f DSGVO) und nach kurzer Zeit gelöscht.
           </p>
         </section>
 
@@ -76,7 +77,24 @@ export default function Datenschutz() {
 
         <section>
           <h2 className="font-semibold text-slate-900 dark:text-slate-100">Hosting</h2>
-          <p>Die Website wird auf eigener Infrastruktur in der EU betrieben.</p>
+          <p>Der Origin-Server der Website wird auf eigener Infrastruktur in der EU betrieben.</p>
+        </section>
+
+        <section>
+          <h2 className="font-semibold text-slate-900 dark:text-slate-100">Content-Delivery-Network (Cloudflare)</h2>
+          <p>
+            Zur Absicherung (Schutz vor Angriffen und Bots), TLS-Verschlüsselung und schnelleren Auslieferung wird die Website über das
+            Content-Delivery-Network von Cloudflare, Inc. (101 Townsend Street, San Francisco, CA 94107, USA) ausgeliefert. Cloudflare verarbeitet
+            dabei als Auftragsverarbeiter (Art. 28 DSGVO) die technisch anfallenden Verbindungsdaten (insbesondere IP-Adresse und Anfrage-Metadaten)
+            und kann ein technisch notwendiges Sicherheits-Cookie zur Bot-Abwehr setzen (<code>__cf_bm</code>). Rechtsgrundlage ist unser berechtigtes
+            Interesse an einem sicheren und verfügbaren Betrieb (Art. 6 Abs. 1 lit. f DSGVO). Dabei können Daten in die USA übertragen werden;
+            Cloudflare ist unter dem EU-U.S. Data Privacy Framework zertifiziert, ergänzend gelten Standardvertragsklauseln und ein
+            Auftragsverarbeitungsvertrag. Details:{" "}
+            <a className="underline" href="https://www.cloudflare.com/privacypolicy/" rel="noopener">
+              Cloudflare Datenschutzerklärung
+            </a>
+            .
+          </p>
         </section>
 
         <section>
