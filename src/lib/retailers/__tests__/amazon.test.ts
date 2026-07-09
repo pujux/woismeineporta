@@ -1,5 +1,5 @@
-import { describe, expect, it } from "vitest";
-import { amazonAdapter, parseAmazon, parseEuroCents } from "@/lib/retailers/amazon";
+import { describe, expect, it, vi } from "vitest";
+import { amazonAdapter, isBlockedPage, parseAmazon, parseEuroCents } from "@/lib/retailers/amazon";
 import { fixture, fixtureFetch } from "./helpers";
 
 describe("parseEuroCents (German number formatting)", () => {
@@ -33,6 +33,18 @@ describe("parseAmazon", () => {
 
   it("throws on a blocked/CAPTCHA page (no productTitle) rather than reporting out_of_stock", () => {
     expect(() => parseAmazon("<html><body>Enter the characters you see below (robot check)</body></html>")).toThrow();
+  });
+});
+
+describe("isBlockedPage", () => {
+  it("flags CAPTCHA / robot-check pages", () => {
+    expect(isBlockedPage("… Enter the characters you see below (robot check) …")).toBe(true);
+    expect(isBlockedPage("<html>To discuss automated access to Amazon data please contact api-services-support@amazon.com</html>")).toBe(true);
+    expect(isBlockedPage("<html><body>tiny page, no title</body></html>")).toBe(true); // short + no productTitle
+  });
+  it("does not flag a real PDP", () => {
+    const real = `<span id="productTitle">Midea PortaSplit</span>${" ".repeat(25000)}`;
+    expect(isBlockedPage(real)).toBe(false);
   });
 });
 
@@ -89,9 +101,30 @@ describe("amazonAdapter", () => {
     ]);
   });
 
-  it("throws when Amazon serves a bot-check page", async () => {
+  it("throws when Amazon serves a bot-check page (both attempts blocked)", async () => {
     await expect(
-      amazonAdapter.check(fixtureFetch([["/dp/", "<html><body>robot check</body></html>"]])),
+      amazonAdapter.check(fixtureFetch([["/dp/", "<html><body>robot check captcha</body></html>"]])),
     ).rejects.toThrow();
+  });
+
+  it("retries once on a CAPTCHA page and recovers when the retry succeeds", async () => {
+    const captcha = "<html><body>Enter the characters you see below (robot check)</body></html>";
+    const blockedFirst = new Set<string>();
+    const fetchFn = vi.fn(async (input: RequestInfo | URL) => {
+      const url = String(input);
+      // Each ASIN's first fetch is a CAPTCHA; the retry gets the real page.
+      if (!blockedFirst.has(url)) {
+        blockedFirst.add(url);
+        return new Response(captcha, { status: 200 });
+      }
+      return new Response(inStock("749,00 €"), { status: 200 });
+    }) as unknown as typeof fetch;
+
+    const result = await amazonAdapter.check(fetchFn);
+    const porta = result.offers.find((o) => o.variant === "portasplit")!;
+    expect(porta.status).toBe("in_stock");
+    expect(porta.priceCents).toBe(74900);
+    // 3 ASINs × 2 attempts (blocked + retry) = 6 fetches
+    expect((fetchFn as unknown as { mock: { calls: unknown[] } }).mock.calls).toHaveLength(6);
   });
 });

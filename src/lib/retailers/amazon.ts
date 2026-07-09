@@ -15,6 +15,33 @@ function productUrl(asin: string): string {
   return `https://www.amazon.de/dp/${asin}`;
 }
 
+// Amazon rate-challenges scrapers: after a few rapid requests it serves a CAPTCHA/
+// robot page instead of the PDP. We pace the per-ASIN fetches with jitter and retry
+// once (after a pause) when we detect a blocked page — no delays under test.
+const isTest = process.env.NODE_ENV === "test";
+const sleep = (ms: number) => new Promise((r) => setTimeout(r, ms));
+const paceMs = () => (isTest ? 0 : 400 + Math.floor(Math.random() * 500));
+const retryDelayMs = () => (isTest ? 0 : 1500 + Math.floor(Math.random() * 1500));
+
+/** A CAPTCHA / robot-check / interstitial page rather than a real PDP. */
+export function isBlockedPage(html: string): boolean {
+  if (/captcha|automated access|api-services-support@amazon|enter the characters you see below/i.test(html)) return true;
+  // Real PDPs are ~1–3 MB and contain the product title; a tiny page without it is a block.
+  return !html.includes('id="productTitle"') && html.length < 20000;
+}
+
+// Fetches a PDP; if the response looks like a bot challenge, waits and retries once.
+async function fetchAmazonHtml(fetchFn: typeof fetch, asin: string): Promise<string> {
+  const url = `${productUrl(asin)}?language=de_DE`; // force German markup regardless of egress geo
+  const opts = { headers: { Accept: "text/html", "Accept-Language": "de-AT,de;q=0.9" } };
+  let html = await (await politeFetch(url, opts, fetchFn)).text();
+  if (isBlockedPage(html)) {
+    await sleep(retryDelayMs());
+    html = await (await politeFetch(url, opts, fetchFn)).text();
+  }
+  return html;
+}
+
 // "1.234,56 €" / "40,33€" → 123456 / 4033 (cents). German number formatting.
 export function parseEuroCents(raw: string | undefined): number | null {
   if (!raw) return null;
@@ -56,16 +83,13 @@ export const amazonAdapter: RetailerAdapter = {
   tier: "slow",
   async check(fetchFn) {
     const offers: OnlineOffer[] = [];
+    let firstFetch = true;
     for (const product of PRODUCTS) {
       const perColour: Array<{ asin: string; priceCents: number | null; inStock: boolean }> = [];
       for (const asin of product.asins) {
-        // language=de_DE forces German markup regardless of the egress IP's geo.
-        const res = await politeFetch(
-          `${productUrl(asin)}?language=de_DE`,
-          { headers: { Accept: "text/html", "Accept-Language": "de-AT,de;q=0.9" } },
-          fetchFn,
-        );
-        const { status, priceCents } = parseAmazon(await res.text());
+        if (!firstFetch) await sleep(paceMs()); // space requests so we don't trip the rate challenge
+        firstFetch = false;
+        const { status, priceCents } = parseAmazon(await fetchAmazonHtml(fetchFn, asin));
         perColour.push({ asin, priceCents, inStock: status === "in_stock" });
       }
       // Available if any colour is buyable; link + price from the cheapest in-stock colour,
