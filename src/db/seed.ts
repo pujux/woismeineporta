@@ -1,5 +1,15 @@
+import { In, Not } from "typeorm";
 import type { DataSource } from "typeorm";
-import { OfferEntity, RetailerEntity, VariantEntity } from "./entities";
+import { OfferEntity, RetailerEntity, StoreAvailabilityEntity, StoreEntity, VariantEntity } from "./entities";
+
+const RETAILERS = [
+  { slug: "bauhaus", name: "BAUHAUS", homepage: "https://www.bauhaus.at" },
+  { slug: "obi", name: "OBI", homepage: "https://www.obi.at" },
+  { slug: "mediamarkt", name: "MediaMarkt", homepage: "https://www.mediamarkt.at" },
+  { slug: "tepto", name: "Tepto", homepage: "https://www.tepto.at" },
+  { slug: "amazon", name: "Amazon", homepage: "https://www.amazon.de" },
+  { slug: "online-batterien", name: "Online-Batterien", homepage: "https://online-batterien.at" },
+];
 
 export async function seed(db: DataSource): Promise<void> {
   await db.getRepository(VariantEntity).upsert(
@@ -9,18 +19,18 @@ export async function seed(db: DataSource): Promise<void> {
     ],
     ["slug"],
   );
-  await db.getRepository(RetailerEntity).upsert(
-    [
-      { slug: "bauhaus", name: "BAUHAUS", homepage: "https://www.bauhaus.at" },
-      { slug: "obi", name: "OBI", homepage: "https://www.obi.at" },
-      { slug: "mediamarkt", name: "MediaMarkt", homepage: "https://www.mediamarkt.at" },
-      { slug: "tepto", name: "Tepto", homepage: "https://www.tepto.at" },
-      { slug: "amazon", name: "Amazon", homepage: "https://www.amazon.de" },
-      { slug: "pv24", name: "PV-24", homepage: "https://www.pv-24.at" },
-      { slug: "online-batterien", name: "Online-Batterien", homepage: "https://online-batterien.at" },
-    ],
-    ["slug"],
-  );
+  await db.getRepository(RetailerEntity).upsert(RETAILERS, ["slug"]);
+
+  // Reconcile: purge retailers dropped from the code (e.g. one that started blocking
+  // us) so no stale card/offer lingers in the DB. Runs on every boot.
+  const known = RETAILERS.map((r) => r.slug);
+  const orphanStores = await db.getRepository(StoreEntity).findBy({ retailerSlug: Not(In(known)) });
+  if (orphanStores.length) {
+    await db.getRepository(StoreAvailabilityEntity).delete({ storeId: In(orphanStores.map((s) => s.id)) });
+    await db.getRepository(StoreEntity).delete({ retailerSlug: Not(In(known)) });
+  }
+  await db.getRepository(OfferEntity).delete({ retailerSlug: Not(In(known)) });
+  await db.getRepository(RetailerEntity).delete({ slug: Not(In(known)) });
 
   // Placeholder offers (status unknown) so every tracked retailer/variant pair
   // shows up in the UI with its deep link even before the first check runs.
@@ -64,11 +74,6 @@ export async function seed(db: DataSource): Promise<void> {
       retailerSlug: "amazon",
       variantSlug: "portasplit-cool",
       url: "https://www.amazon.de/dp/B0GXDWTFR5",
-    },
-    {
-      retailerSlug: "pv24",
-      variantSlug: "portasplit",
-      url: "https://www.pv-24.at/products/midea-porta-split-mobile-klimaanlage-mit-ausseneinheit/",
     },
     {
       retailerSlug: "online-batterien",

@@ -6,11 +6,33 @@ describe("createDb", () => {
   it("seeds variants and retailers idempotently", async () => {
     const db = await createDb(":memory:");
     expect(await db.getRepository(VariantEntity).count()).toBe(2);
-    expect(await db.getRepository(RetailerEntity).count()).toBe(7);
+    expect(await db.getRepository(RetailerEntity).count()).toBe(6);
 
     await seed(db);
     expect(await db.getRepository(VariantEntity).count()).toBe(2);
-    expect(await db.getRepository(RetailerEntity).count()).toBe(7);
+    expect(await db.getRepository(RetailerEntity).count()).toBe(6);
+    await db.destroy();
+  });
+
+  it("reconciles away retailers/offers no longer in the code", async () => {
+    const db = await createDb(":memory:");
+    // Simulate a dropped retailer still lingering in the DB.
+    await db.getRepository(RetailerEntity).insert({ slug: "pv24", name: "PV-24", homepage: "https://www.pv-24.at" });
+    await db.getRepository(OfferEntity).insert({
+      retailerSlug: "pv24",
+      variantSlug: "portasplit",
+      url: "https://www.pv-24.at/p",
+      priceCents: null,
+      status: "unknown",
+      lastCheckedAt: 0,
+      lastChangedAt: 0,
+    });
+
+    await seed(db); // reconcile runs
+
+    expect(await db.getRepository(RetailerEntity).findOneBy({ slug: "pv24" })).toBeNull();
+    expect(await db.getRepository(OfferEntity).findBy({ retailerSlug: "pv24" })).toHaveLength(0);
+    expect(await db.getRepository(RetailerEntity).count()).toBe(6); // only the known set remains
     await db.destroy();
   });
 
