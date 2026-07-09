@@ -1,10 +1,9 @@
 import { getDb } from "@/db";
-import { getAvailabilityTimeline, getRecentEvents, getVariantStatuses } from "@/lib/queries";
+import { getRecentEvents, getVariantStatuses } from "@/lib/queries";
 import { singleflight } from "@/lib/singleflight";
 import { buildFaqJsonLd, buildProductJsonLd, jsonLdScript } from "@/lib/seo";
 import { FAQ_ITEMS } from "@/data/product-content";
 import { formatPrice } from "@/lib/format";
-import { AvailabilityTimeline } from "@/components/AvailabilityTimeline";
 import { EventFeed } from "@/components/EventFeed";
 import { LiveRefresh } from "@/components/LiveRefresh";
 import { ProductInfo } from "@/components/ProductInfo";
@@ -19,14 +18,12 @@ export const dynamic = "force-dynamic";
 export default async function Home() {
   const db = await getDb();
   // Dynamic (force-dynamic) server component: renders once per request, so a
-  // fresh timestamp here is intended — this is the "now" for initial relative times
-  // and the availability-timeline window.
+  // fresh timestamp here is intended — this is the "now" for initial relative times.
   // eslint-disable-next-line react-hooks/purity
   const now = Date.now();
-  const [statuses, events, timeline] = await Promise.all([
+  const [statuses, events] = await Promise.all([
     singleflight("variant-statuses", () => getVariantStatuses(db)),
     singleflight("recent-events:60", () => getRecentEvents(db, 60)),
-    singleflight("availability-timeline", () => getAvailabilityTimeline(db, now)),
   ]);
   const anyInStock = statuses.some((s) => s.offers.some((o) => o.status === "in_stock"));
   const jsonLd = [...buildProductJsonLd(statuses, BASE_URL), buildFaqJsonLd(FAQ_ITEMS)];
@@ -81,10 +78,6 @@ export default async function Home() {
           </div>
         ))}
       </section>
-
-      <div className="mt-12">
-        <AvailabilityTimeline data={timeline} />
-      </div>
 
       <section className="mt-12">
         <SubscribePanel />
