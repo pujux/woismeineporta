@@ -21,7 +21,7 @@ export const FAQ_ITEMS: FaqItem[] = [
   {
     question: "Wo bekomme ich die PortaSplit in Österreich?",
     answer:
-      "Wir beobachten laufend mehrere in Österreich lieferbare Händler: OBI, BAUHAUS, MediaMarkt, Tepto, Amazon, PV-24 und Online-Batterien. Bei OBI und BAUHAUS siehst du zusätzlich die Verfügbarkeit je Filiale, bei den übrigen den Online-Bestand. Sobald ein Händler wieder Lagerbestand hat, steht das hier oben — inklusive Preis — und wir verlinken direkt zum Shop.",
+      "Wir beobachten laufend mehrere in Österreich lieferbare Händler: OBI, BAUHAUS, MediaMarkt, Tepto, Amazon und Online-Batterien. Bei OBI und BAUHAUS siehst du zusätzlich die Verfügbarkeit je Filiale, bei den übrigen den Online-Bestand. Sobald ein Händler wieder Lagerbestand hat, steht das hier oben — inklusive Preis — und wir verlinken direkt zum Shop.",
   },
   {
     question: "Warum ist die PortaSplit so oft ausverkauft?",
