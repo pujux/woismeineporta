@@ -1,57 +1,74 @@
 import { describe, expect, it } from "vitest";
-import { computeOfferHistory, type HistoryEvent } from "@/lib/stats";
+import { combineTimelines, computeTimeline, priceRange, type TimelineEvent } from "@/lib/stats";
 
-const DAY = 24 * 3_600_000;
-const NOW = 1000 * DAY;
-const restock = (daysAgo: number): HistoryEvent => ({ type: "online_restock", priceCents: null, createdAt: NOW - daysAgo * DAY });
-const soldout = (daysAgo: number): HistoryEvent => ({ type: "online_soldout", priceCents: null, createdAt: NOW - daysAgo * DAY });
-const priceChange = (daysAgo: number, cents: number): HistoryEvent => ({ type: "price_change", priceCents: cents, createdAt: NOW - daysAgo * DAY });
+// Work in small integer time units with 24 buckets over [0,24] → 1 unit per bucket.
+const NOW = 24;
+const SINCE = 0;
+const B = 24;
+const ev = (type: string, t: number, cents: number | null = null): TimelineEvent => ({ type, createdAt: t, priceCents: cents });
+const availOf = (bs: { avail: number }[]) => bs.map((b) => b.avail);
 
-describe("computeOfferHistory", () => {
-  it("currently in stock → lastInStockAt is now, counts restocks", () => {
-    const h = computeOfferHistory([restock(5)], { status: "in_stock", priceCents: 74900, lastChangedAt: NOW - 5 * DAY }, NOW);
-    expect(h.lastInStockAt).toBe(NOW);
-    expect(h.restockCount).toBe(1);
-    expect(h.uptimePct).toBe(100); // in stock the whole 5-day observed span
-    expect(h.observedDays).toBeCloseTo(5, 5);
+describe("computeTimeline — availability", () => {
+  it("no events, currently in stock → fully available", () => {
+    const bs = computeTimeline([], { status: "in_stock", priceCents: null }, NOW, SINCE, B);
+    expect(availOf(bs).every((a) => a === 1)).toBe(true);
   });
 
-  it("out of stock with a restock→soldout cycle → uptime over observed span, last-in-stock at the sell-out", () => {
-    const h = computeOfferHistory([restock(10), soldout(6)], { status: "out_of_stock", priceCents: 74900, lastChangedAt: NOW - 6 * DAY }, NOW);
-    expect(h.lastInStockAt).toBe(NOW - 6 * DAY);
-    expect(h.restockCount).toBe(1);
-    expect(h.uptimePct).toBeCloseTo(40, 5); // in stock 4 of the 10 observed days
-    expect(h.observedDays).toBeCloseTo(10, 5);
+  it("no events, currently out → fully unavailable", () => {
+    const bs = computeTimeline([], { status: "out_of_stock", priceCents: null }, NOW, SINCE, B);
+    expect(availOf(bs).every((a) => a === 0)).toBe(true);
   });
 
-  it("no events but stable-in-stock since before the window → 100% over full window", () => {
-    const h = computeOfferHistory([], { status: "in_stock", priceCents: 74900, lastChangedAt: NOW - 40 * DAY }, NOW);
-    expect(h.uptimePct).toBe(100);
-    expect(h.observedDays).toBeCloseTo(30, 5);
-    expect(h.lastInStockAt).toBe(NOW);
+  it("sold out mid-window → available before, gone after", () => {
+    const bs = computeTimeline([ev("online_soldout", 12)], { status: "out_of_stock", priceCents: null }, NOW, SINCE, B);
+    expect(bs.slice(0, 12).every((b) => b.avail === 1)).toBe(true);
+    expect(bs.slice(12).every((b) => b.avail === 0)).toBe(true);
   });
 
-  it("no events and unknown status → uptime null (can't say)", () => {
-    const h = computeOfferHistory([], { status: "unknown", priceCents: null, lastChangedAt: 0 }, NOW);
-    expect(h.uptimePct).toBeNull();
-    expect(h.observedDays).toBe(0);
-    expect(h.lastInStockAt).toBeNull();
-    expect(h.pricePoints).toEqual([]);
+  it("restock mid-window → unavailable before, available after", () => {
+    const bs = computeTimeline([ev("online_restock", 6)], { status: "in_stock", priceCents: null }, NOW, SINCE, B);
+    expect(bs.slice(0, 6).every((b) => b.avail === 0)).toBe(true);
+    expect(bs.slice(6).every((b) => b.avail === 1)).toBe(true);
   });
 
-  it("builds a deduped price series and ignores events outside the window", () => {
-    const h = computeOfferHistory(
-      [priceChange(40, 99900), priceChange(20, 79900), priceChange(10, 74900), priceChange(2, 74900)],
-      { status: "in_stock", priceCents: 74900, lastChangedAt: NOW - 2 * DAY },
+  it("a partial bucket gets a fractional availability", () => {
+    const bs = computeTimeline([ev("online_soldout", 12.5)], { status: "out_of_stock", priceCents: null }, NOW, SINCE, B);
+    expect(bs[12].avail).toBeCloseTo(0.5, 5); // in stock for half of bucket [12,13]
+  });
+});
+
+describe("computeTimeline — price forward-fill", () => {
+  it("forward-fills the last known price and back-fills before the first", () => {
+    const bs = computeTimeline(
+      [ev("price_change", 6, 99900), ev("price_change", 18, 89900)],
+      { status: "in_stock", priceCents: 89900 },
       NOW,
+      SINCE,
+      B,
     );
-    expect(h.pricePoints).toEqual([79900, 74900]); // -40d excluded, consecutive dupes collapsed
+    expect(bs[0].priceCents).toBe(99900); // backfilled to the first known point
+    expect(bs[10].priceCents).toBe(99900);
+    expect(bs[20].priceCents).toBe(89900); // after the drop at t=18
   });
 
-  it("excludes availability events older than the window", () => {
-    const h = computeOfferHistory([restock(40), soldout(35)], { status: "out_of_stock", priceCents: null, lastChangedAt: NOW - 35 * DAY }, NOW);
-    expect(h.restockCount).toBe(0); // both transitions predate the 30-day window
-    expect(h.uptimePct).toBe(0); // out since before the window → out the whole window
-    expect(h.lastInStockAt).toBeNull();
+  it("null price when nothing is known", () => {
+    const bs = computeTimeline([], { status: "unknown", priceCents: null }, NOW, SINCE, B);
+    expect(bs.every((b) => b.priceCents === null)).toBe(true);
+  });
+});
+
+describe("combineTimelines & priceRange", () => {
+  it("combines to available-anywhere + cheapest price", () => {
+    const a = [{ avail: 1, priceCents: 90000 }, { avail: 0, priceCents: 80000 }];
+    const b = [{ avail: 0, priceCents: 70000 }, { avail: 0.5, priceCents: null }];
+    expect(combineTimelines([a, b])).toEqual([
+      { avail: 1, priceCents: 70000 },
+      { avail: 0.5, priceCents: 80000 },
+    ]);
+  });
+
+  it("priceRange returns min/max of non-null prices, or null", () => {
+    expect(priceRange([{ avail: 1, priceCents: 74900 }, { avail: 0, priceCents: 99900 }, { avail: 0, priceCents: null }])).toEqual([74900, 99900]);
+    expect(priceRange([{ avail: 0, priceCents: null }])).toBeNull();
   });
 });
