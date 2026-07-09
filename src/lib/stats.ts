@@ -1,96 +1,111 @@
 import type { StockStatus } from "./retailers/types";
 
 const DAY_MS = 24 * 3_600_000;
-export const HISTORY_WINDOW_MS = 30 * DAY_MS;
+export const TIMELINE_WINDOW_MS = 30 * DAY_MS;
+export const TIMELINE_BUCKETS = 24;
 
-export interface HistoryEvent {
+export interface TimelineEvent {
   type: string; // online_restock | online_soldout | price_change
   priceCents: number | null;
   createdAt: number;
 }
 
-export interface OfferHistory {
-  /** Last moment the offer was orderable (now if currently in stock), or null. */
-  lastInStockAt: number | null;
-  /** Number of times it came back in stock within the window. */
-  restockCount: number;
-  /** Fraction of the *observed* span it was in stock (0–100), or null if too thin. */
-  uptimePct: number | null;
-  /** How many days of history the uptime covers (≤ window). */
-  observedDays: number;
-  /** Price series in cents, oldest→newest, for the sparkline (empty/1 = no line). */
-  pricePoints: number[];
+/** One column of the availability timeline. */
+export interface TimelineBucket {
+  /** Fraction of the bucket the offer was in stock (0–1). */
+  avail: number;
+  /** Forward-filled price at the bucket's end, or null if never priced. */
+  priceCents: number | null;
 }
 
 /**
- * Reconstructs availability + price history for one online offer from its event log.
- * Approximate by design (events are transitions, not snapshots): uptime is measured
- * from the first transition in the window — the earliest point we can *know* the state —
- * so a fresh deployment reports a short observed span rather than a misleading full one.
+ * Reconstructs a bucketed availability + price timeline for one online offer over
+ * [since, now]. Availability is integrated from restock/soldout transitions (state at
+ * `since` seeded from the last transition before it, else the opposite of the first
+ * future one, else the current status). Price is forward-filled from price_change events
+ * (+ the current price). All shops share the same `since`/`buckets` so columns align.
  */
-export function computeOfferHistory(
-  events: HistoryEvent[],
-  current: { status: StockStatus; priceCents: number | null; lastChangedAt: number },
+export function computeTimeline(
+  events: TimelineEvent[],
+  current: { status: StockStatus; priceCents: number | null },
   now: number,
-  windowMs: number = HISTORY_WINDOW_MS,
-): OfferHistory {
-  const windowStart = now - windowMs;
-  const inWindow = events
-    .filter((e) => e.createdAt >= windowStart && e.createdAt <= now)
+  since: number,
+  buckets: number = TIMELINE_BUCKETS,
+): TimelineBucket[] {
+  const bucketMs = Math.max(1, (now - since) / buckets);
+
+  const avail = events
+    .filter((e) => e.type === "online_restock" || e.type === "online_soldout")
     .sort((a, b) => a.createdAt - b.createdAt);
 
-  const avail = inWindow.filter((e) => e.type === "online_restock" || e.type === "online_soldout");
-  const restockCount = avail.filter((e) => e.type === "online_restock").length;
+  // State at `since`.
+  const before = avail.filter((e) => e.createdAt <= since);
+  let inStock: boolean;
+  if (before.length) inStock = before[before.length - 1].type === "online_restock";
+  else if (avail.length) inStock = avail[0].type !== "online_restock"; // opposite of the first future transition
+  else inStock = current.status === "in_stock";
 
-  // Last in-stock moment: now if currently in stock, else the most recent sell-out
-  // (it was available up until then). Null if never observed in stock in the window.
-  let lastInStockAt: number | null = null;
-  if (current.status === "in_stock") {
-    lastInStockAt = now;
-  } else {
-    for (let i = avail.length - 1; i >= 0; i--) {
-      if (avail[i].type === "online_soldout") {
-        lastInStockAt = avail[i].createdAt;
-        break;
-      }
-    }
+  // In-stock intervals across [since, now].
+  const transitions = avail.filter((e) => e.createdAt > since && e.createdAt <= now);
+  const intervals: Array<{ start: number; end: number; inStock: boolean }> = [];
+  let start = since;
+  let state = inStock;
+  for (const t of transitions) {
+    intervals.push({ start, end: t.createdAt, inStock: state });
+    state = t.type === "online_restock";
+    start = t.createdAt;
   }
+  intervals.push({ start, end: now, inStock: state });
 
-  // Uptime over the observed span.
-  let uptimePct: number | null = null;
-  let observedDays = 0;
-  if (avail.length === 0) {
-    // No transitions: if the current state has held since before the window and is known,
-    // the whole window was that state; otherwise we can't say.
-    if (current.status !== "unknown" && current.lastChangedAt > 0 && current.lastChangedAt <= windowStart) {
-      uptimePct = current.status === "in_stock" ? 100 : 0;
-      observedDays = windowMs / DAY_MS;
+  // Forward-filled price lookup.
+  const pts: Array<[number, number]> = [];
+  for (const e of events) if (e.type === "price_change" && typeof e.priceCents === "number") pts.push([e.createdAt, e.priceCents]);
+  if (typeof current.priceCents === "number") pts.push([now, current.priceCents]);
+  pts.sort((a, b) => a[0] - b[0]);
+  const priceAt = (t: number): number | null => {
+    if (!pts.length) return null;
+    let v = pts[0][1]; // backfill before the first known point
+    for (const [pt, pc] of pts) {
+      if (pt <= t) v = pc;
+      else break;
     }
-  } else {
-    const obsStart = avail[0].createdAt;
-    let cursor = obsStart;
-    let inStock = avail[0].type === "online_restock"; // state right AFTER the first transition
+    return v;
+  };
+
+  const out: TimelineBucket[] = [];
+  for (let i = 0; i < buckets; i++) {
+    const b0 = since + i * bucketMs;
+    const b1 = since + (i + 1) * bucketMs;
     let inMs = 0;
-    for (let i = 1; i < avail.length; i++) {
-      if (inStock) inMs += avail[i].createdAt - cursor;
-      cursor = avail[i].createdAt;
-      inStock = avail[i].type === "online_restock";
+    for (const iv of intervals) {
+      if (!iv.inStock) continue;
+      inMs += Math.max(0, Math.min(b1, iv.end) - Math.max(b0, iv.start));
     }
-    if (inStock) inMs += now - cursor;
-    const span = now - obsStart;
-    if (span > 0) {
-      uptimePct = (inMs / span) * 100;
-      observedDays = span / DAY_MS;
-    }
+    out.push({ avail: Math.min(1, Math.max(0, inMs / bucketMs)), priceCents: priceAt(b1) });
   }
+  return out;
+}
 
-  // Price series: each recorded price change (carries the new price) + the current price,
-  // oldest→newest, collapsing consecutive duplicates.
-  const priceEvents = inWindow.filter((e) => e.type === "price_change" && typeof e.priceCents === "number");
-  const raw = [...priceEvents.map((e) => e.priceCents as number)];
-  if (typeof current.priceCents === "number") raw.push(current.priceCents);
-  const pricePoints: number[] = [];
-  for (const p of raw) if (pricePoints[pricePoints.length - 1] !== p) pricePoints.push(p);
+/** Combines per-shop timelines into an "all shops" series: available anywhere, cheapest price. */
+export function combineTimelines(series: TimelineBucket[][]): TimelineBucket[] {
+  if (series.length === 0) return [];
+  const n = series[0].length;
+  const out: TimelineBucket[] = [];
+  for (let i = 0; i < n; i++) {
+    let avail = 0;
+    let priceCents: number | null = null;
+    for (const s of series) {
+      avail = Math.max(avail, s[i]?.avail ?? 0);
+      const p = s[i]?.priceCents;
+      if (typeof p === "number") priceCents = priceCents === null ? p : Math.min(priceCents, p);
+    }
+    out.push({ avail, priceCents });
+  }
+  return out;
+}
 
-  return { lastInStockAt, restockCount, uptimePct, observedDays, pricePoints };
+/** Min/max of the non-null prices in a series, for the "Preis: X–Y" legend. */
+export function priceRange(buckets: TimelineBucket[]): [number, number] | null {
+  const ps = buckets.map((b) => b.priceCents).filter((p): p is number => typeof p === "number");
+  return ps.length ? [Math.min(...ps), Math.max(...ps)] : null;
 }

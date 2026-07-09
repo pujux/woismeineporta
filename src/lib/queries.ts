@@ -1,7 +1,7 @@
 import { EventEntity, OfferEntity, RetailerEntity, StoreAvailabilityEntity, StoreEntity, VariantEntity, type AppDb } from "@/db";
 import { distanceKm, plzToLatLng } from "./geo";
 import type { StockStatus, VariantSlug } from "./retailers/types";
-import { computeOfferHistory, HISTORY_WINDOW_MS, type HistoryEvent, type OfferHistory } from "./stats";
+import { combineTimelines, computeTimeline, priceRange, TIMELINE_WINDOW_MS, type TimelineBucket, type TimelineEvent } from "./stats";
 
 export interface VariantStatus {
   variant: { slug: VariantSlug; name: string; uvpCents: number };
@@ -14,31 +14,13 @@ export interface VariantStatus {
     pickupNote: string | null;
     lastCheckedAt: number;
     lastChangedAt: number;
-    history: OfferHistory;
   }>;
 }
 
-export async function getVariantStatuses(db: AppDb, now: number = Date.now()): Promise<VariantStatus[]> {
+export async function getVariantStatuses(db: AppDb): Promise<VariantStatus[]> {
   const variants = await db.getRepository(VariantEntity).find();
   const retailers = new Map((await db.getRepository(RetailerEntity).find()).map((r) => [r.slug, r]));
   const offers = await db.getRepository(OfferEntity).find();
-
-  // Online events (store_id IS NULL) within the history window, grouped per offer.
-  const evRows = await db
-    .getRepository(EventEntity)
-    .createQueryBuilder("e")
-    .where("e.created_at >= :start", { start: now - HISTORY_WINDOW_MS })
-    .andWhere("e.store_id IS NULL")
-    .getMany();
-  const eventsByOffer = new Map<string, HistoryEvent[]>();
-  for (const e of evRows) {
-    const key = `${e.retailerSlug}:${e.variantSlug}`;
-    (eventsByOffer.get(key) ?? eventsByOffer.set(key, []).get(key)!).push({
-      type: e.type,
-      priceCents: e.priceCents,
-      createdAt: e.createdAt,
-    });
-  }
 
   return variants.map((variant) => ({
     variant: {
@@ -57,14 +39,86 @@ export async function getVariantStatuses(db: AppDb, now: number = Date.now()): P
         pickupNote: o.pickupNote,
         lastCheckedAt: o.lastCheckedAt,
         lastChangedAt: o.lastChangedAt,
-        history: computeOfferHistory(
-          eventsByOffer.get(`${o.retailerSlug}:${o.variantSlug}`) ?? [],
-          { status: o.status, priceCents: o.priceCents, lastChangedAt: o.lastChangedAt },
-          now,
-        ),
       }))
       .sort((a, b) => a.retailerName.localeCompare(b.retailerName)),
   }));
+}
+
+export interface TimelineSeries {
+  buckets: TimelineBucket[];
+  priceRange: [number, number] | null;
+}
+export interface VariantTimeline {
+  slug: VariantSlug;
+  name: string;
+  /** Start of the observed window, or null when there's no history yet. */
+  since: number | null;
+  now: number;
+  /** Restock + sell-out events observed (for "Basis: N Events"). */
+  eventCount: number;
+  shops: Array<{ slug: string; name: string }>;
+  /** Keyed by "all" + each shop slug. */
+  series: Record<string, TimelineSeries>;
+}
+
+/**
+ * Builds the availability + price timeline per variant (all shops + each shop),
+ * from the online event log. All series in a variant share one `since`/bucket grid so
+ * the columns line up and can be combined into an "all shops" view.
+ */
+export async function getAvailabilityTimeline(db: AppDb, now: number = Date.now()): Promise<VariantTimeline[]> {
+  const variants = await db.getRepository(VariantEntity).find();
+  const retailers = new Map((await db.getRepository(RetailerEntity).find()).map((r) => [r.slug, r.name]));
+  const offers = await db.getRepository(OfferEntity).find();
+
+  const evRows = await db
+    .getRepository(EventEntity)
+    .createQueryBuilder("e")
+    .where("e.created_at >= :start", { start: now - TIMELINE_WINDOW_MS })
+    .andWhere("e.store_id IS NULL")
+    .getMany();
+  const eventsByOffer = new Map<string, TimelineEvent[]>();
+  for (const e of evRows) {
+    const key = `${e.retailerSlug}:${e.variantSlug}`;
+    (eventsByOffer.get(key) ?? eventsByOffer.set(key, []).get(key)!).push({ type: e.type, priceCents: e.priceCents, createdAt: e.createdAt });
+  }
+
+  return variants.map((variant) => {
+    const vOffers = offers.filter((o) => o.variantSlug === variant.slug).sort((a, b) => (retailers.get(a.retailerSlug) ?? a.retailerSlug).localeCompare(retailers.get(b.retailerSlug) ?? b.retailerSlug));
+    const shops = vOffers.map((o) => ({ slug: o.retailerSlug, name: retailers.get(o.retailerSlug) ?? o.retailerSlug }));
+
+    const allEvents = vOffers.flatMap((o) => eventsByOffer.get(`${o.retailerSlug}:${variant.slug}`) ?? []);
+    const availEvents = allEvents.filter((e) => e.type === "online_restock" || e.type === "online_soldout");
+    const earliest = availEvents.length ? Math.min(...availEvents.map((e) => e.createdAt)) : null;
+    const since = earliest === null ? null : Math.max(earliest, now - TIMELINE_WINDOW_MS);
+
+    const series: Record<string, TimelineSeries> = {};
+    if (since !== null) {
+      const perShop: TimelineBucket[][] = [];
+      for (const o of vOffers) {
+        const buckets = computeTimeline(
+          eventsByOffer.get(`${o.retailerSlug}:${variant.slug}`) ?? [],
+          { status: o.status, priceCents: o.priceCents },
+          now,
+          since,
+        );
+        series[o.retailerSlug] = { buckets, priceRange: priceRange(buckets) };
+        perShop.push(buckets);
+      }
+      const all = combineTimelines(perShop);
+      series.all = { buckets: all, priceRange: priceRange(all) };
+    }
+
+    return {
+      slug: variant.slug as VariantSlug,
+      name: variant.name,
+      since,
+      now,
+      eventCount: availEvents.length,
+      shops,
+      series,
+    };
+  });
 }
 
 export interface FeedEvent {
