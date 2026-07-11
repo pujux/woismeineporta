@@ -4,7 +4,7 @@ import { useState } from "react";
 import type { NearbyStore } from "@/lib/queries";
 import { StoreMap, storeKey, type MapFocus } from "./StoreMap";
 
-const RADII = [10, 25, 50, 100] as const;
+const RADII = [10, 25, 50, 100, 200] as const;
 const LIST_LIMIT = 5; // stores shown before "show more"
 
 const INPUT_CLASSES =

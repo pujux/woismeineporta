@@ -7,7 +7,7 @@ const VARIANTS = [
   { slug: "portasplit-cool", label: "PortaSplit Cool" },
 ] as const;
 
-const RADII = [10, 25, 50, 100] as const;
+const RADII = [10, 25, 50, 100, 200] as const;
 
 const INPUT_CLASSES =
   "rounded-lg border border-slate-300 bg-white px-3 py-2 text-sm text-slate-900 placeholder:text-slate-400 focus:border-sky-500 focus:outline-none dark:border-slate-700 dark:bg-slate-900 dark:text-slate-100 dark:placeholder:text-slate-500";
