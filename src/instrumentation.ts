@@ -3,7 +3,7 @@
 function warnMissingEnv() {
   const groups: Array<[string, string[]]> = [
     ["Web Push", ["VAPID_PUBLIC_KEY", "VAPID_PRIVATE_KEY", "VAPID_SUBJECT"]],
-    ["E-Mail (Brevo)", ["BREVO_API_KEY", "EMAIL_FROM"]],
+    ["E-Mail (Scaleway)", ["SCALEWAY_SECRET_KEY", "SCALEWAY_PROJECT_ID", "EMAIL_FROM"]],
     ["Absolute URLs (canonical/OG/e-mail links)", ["PUBLIC_BASE_URL"]],
   ];
   for (const [feature, keys] of groups) {

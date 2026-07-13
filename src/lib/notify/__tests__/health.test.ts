@@ -44,7 +44,7 @@ describe("notifyOwner", () => {
 
   it("swallows send errors and returns false (never throws)", async () => {
     process.env.ADMIN_EMAIL = "ops@example.com";
-    const send = vi.fn().mockRejectedValue(new Error("brevo down"));
+    const send = vi.fn().mockRejectedValue(new Error("scaleway down"));
     await expect(notifyOwner("s", "b", send)).resolves.toBe(false);
   });
 });

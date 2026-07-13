@@ -1,4 +1,4 @@
-import { brevoSend, type SendFn } from "./email";
+import { scalewaySend, type SendFn } from "./email";
 
 /** The owner's alert address: ADMIN_EMAIL, else the bare address from EMAIL_REPLY_TO. */
 export function ownerAddress(): string | null {
@@ -12,7 +12,7 @@ export function ownerAddress(): string | null {
  * pings). Best-effort: returns false and logs if unconfigured or the send fails —
  * never throws, so a poller tick can call it without a guard.
  */
-export async function notifyOwner(subject: string, html: string, send: SendFn = brevoSend): Promise<boolean> {
+export async function notifyOwner(subject: string, html: string, send: SendFn = scalewaySend): Promise<boolean> {
   const to = ownerAddress();
   if (!to) return false; // ADMIN_EMAIL / EMAIL_REPLY_TO not set — health alerts disabled
   try {
