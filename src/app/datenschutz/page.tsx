@@ -52,7 +52,7 @@ export default function Datenschutz() {
           <p>
             Beim E-Mail-Alarm speichern wir deine E-Mail-Adresse und Einstellungen erst nach Bestätigung (Double-Opt-in). Rechtsgrundlage:
             Einwilligung (Art. 6 Abs. 1 lit. a DSGVO). Jede E-Mail enthält einen Abmeldelink; mit der Abmeldung werden deine Daten gelöscht. Für den
-            Versand nutzen wir Brevo (Sendinblue SAS, Frankreich) als Auftragsverarbeiter; die Verarbeitung erfolgt innerhalb der EU.
+            Versand nutzen wir Scaleway Transactional Email (Scaleway SAS, Frankreich) als Auftragsverarbeiter; die Verarbeitung erfolgt innerhalb der EU.
           </p>
         </section>
 

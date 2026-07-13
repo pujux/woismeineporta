@@ -5,32 +5,47 @@ import { VARIANT_SLUGS } from "@/lib/variants";
 
 export type SendFn = (to: string, subject: string, html: string) => Promise<void>;
 
-/** Parse `"Name <email>"` (or a bare address) into Brevo's sender/replyTo shape. */
+/** Parse `"Name <email>"` (or a bare address) into a {name?, email} shape. */
 function parseAddress(v: string): { name?: string; email: string } {
   const m = v.match(/^\s*(.*?)\s*<([^>]+)>\s*$/);
   return m ? { name: m[1] || undefined, email: m[2].trim() } : { email: v.trim() };
 }
 
-// Brevo (Sendinblue) transactional API — plain fetch, no SDK dependency (Node has
-// global fetch). Sender domain must be authenticated in Brevo (SPF/DKIM/DMARC).
-// Exported so other channels (owner/health alerts) can reuse the same sender.
-export const brevoSend: SendFn = async (to, subject, html) => {
-  const apiKey = process.env.BREVO_API_KEY;
-  if (!apiKey) throw new Error("BREVO_API_KEY not set");
-  const res = await fetch("https://api.brevo.com/v3/smtp/email", {
+/** Bare-bones HTML → text for the plain-text part (deliverability + Scaleway min-length). */
+function htmlToText(html: string): string {
+  return html
+    .replace(/<a[^>]*href="([^"]*)"[^>]*>(.*?)<\/a>/gi, "$2 ($1)")
+    .replace(/<[^>]+>/g, " ")
+    .replace(/\s+/g, " ")
+    .trim();
+}
+
+// Scaleway Transactional Email API — plain fetch, no SDK dependency (Node has global
+// fetch). EU-hosted (French data centres). Sender domain must be verified in Scaleway
+// (SPF/DKIM). Exported so other channels (owner/health alerts) can reuse the sender.
+export const scalewaySend: SendFn = async (to, subject, html) => {
+  const secret = process.env.SCALEWAY_SECRET_KEY;
+  const projectId = process.env.SCALEWAY_PROJECT_ID;
+  if (!secret || !projectId) throw new Error("SCALEWAY_SECRET_KEY / SCALEWAY_PROJECT_ID not set");
+  const region = process.env.SCALEWAY_TEM_REGION ?? "fr-par";
+  const res = await fetch(`https://api.scaleway.com/transactional-email/v1alpha1/regions/${region}/emails`, {
     method: "POST",
-    headers: { "api-key": apiKey, "content-type": "application/json", accept: "application/json" },
+    headers: { "X-Auth-Token": secret, "Content-Type": "application/json" },
     body: JSON.stringify({
-      sender: parseAddress(process.env.EMAIL_FROM ?? "Wo is meine Porta? <noreply@woismeineporta.pufler.dev>"),
+      from: parseAddress(process.env.EMAIL_FROM ?? "Wo is meine Porta? <noreply@woismeineporta.pufler.dev>"),
       to: [{ email: to }],
       subject,
-      htmlContent: html,
-      ...(process.env.EMAIL_REPLY_TO ? { replyTo: parseAddress(process.env.EMAIL_REPLY_TO) } : {}),
+      html,
+      text: htmlToText(html),
+      project_id: projectId,
+      ...(process.env.EMAIL_REPLY_TO
+        ? { additional_headers: [{ key: "Reply-To", value: parseAddress(process.env.EMAIL_REPLY_TO).email }] }
+        : {}),
     }),
   });
   if (!res.ok) {
     const body = await res.text().catch(() => "");
-    throw new Error(`brevo: HTTP ${res.status} ${body.slice(0, 200)}`);
+    throw new Error(`scaleway: HTTP ${res.status} ${body.slice(0, 200)}`);
   }
 };
 
@@ -59,7 +74,7 @@ async function sendConfirmMail(send: SendFn, email: string, confirmToken: string
 export async function createEmailSubscription(
   db: AppDb,
   input: { email: string; variantSlugs: string[]; zip?: string; radiusKm?: number },
-  send: SendFn = brevoSend,
+  send: SendFn = scalewaySend,
   now: number = Date.now(),
 ): Promise<"created" | "resent" | "invalid"> {
   const email = input.email?.trim().toLowerCase();
@@ -138,7 +153,7 @@ export async function sendAlertEmail(
   subscriptionId: number,
   subject: string,
   html: string,
-  send: SendFn = brevoSend,
+  send: SendFn = scalewaySend,
 ): Promise<"sent" | "failed"> {
   const row = await db.getRepository(EmailSubscriptionEntity).findOneBy({ id: subscriptionId });
   if (!row) return "failed";
