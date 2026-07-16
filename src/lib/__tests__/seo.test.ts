@@ -49,6 +49,23 @@ describe("buildProductJsonLd", () => {
   it("omits offers entirely when a variant has none", () => {
     expect(cool.offers).toBeUndefined();
   });
+
+  it("maps a pre_orderable offer to schema.org/PreOrder", () => {
+    const [only] = buildProductJsonLd(
+      [
+        {
+          variant: { slug: "portasplit", name: "Midea PortaSplit", uvpCents: 119900 },
+          offers: [
+            { retailerSlug: "online-batterien", retailerName: "Online-Batterien", url: "https://online-batterien.at/p", priceCents: 119002, status: "pre_orderable", pickupNote: null, lastCheckedAt: 0, lastChangedAt: 0 },
+          ],
+        },
+      ],
+      "https://woismeineporta.at",
+    );
+    const agg = only.offers as Record<string, unknown>;
+    const offer = (agg.offers as Record<string, unknown>[])[0];
+    expect(offer.availability).toBe("https://schema.org/PreOrder");
+  });
 });
 
 describe("buildFaqJsonLd", () => {

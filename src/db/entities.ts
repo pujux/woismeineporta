@@ -1,6 +1,6 @@
 import { EntitySchema } from "typeorm";
 
-export type StockStatusDb = "in_stock" | "out_of_stock" | "unknown";
+export type StockStatusDb = "in_stock" | "out_of_stock" | "pre_orderable" | "unknown";
 
 export interface Variant {
   slug: string;

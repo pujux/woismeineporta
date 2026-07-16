@@ -1,4 +1,7 @@
-export type StockStatus = "in_stock" | "out_of_stock" | "unknown";
+// "pre_orderable": buyable now (an order can be placed) but not physically in stock —
+// e.g. a shop's schema.org PreOrder/BackOrder with a future expected-arrival date. It is
+// deliberately NOT "in_stock" and never fires a restock alert; it's a display-only state.
+export type StockStatus = "in_stock" | "out_of_stock" | "pre_orderable" | "unknown";
 export type VariantSlug = "portasplit" | "portasplit-cool";
 
 export interface OnlineOffer {

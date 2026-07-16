@@ -8,13 +8,16 @@ import type { OnlineOffer, RetailerAdapter, StockStatus } from "./types";
 const URL = "https://online-batterien.at/17837/midea-portasplit-klimageraet-diy-mobile-split-klimaanlage-12k-eek-a/a";
 
 const IN_STOCK = new Set(["InStock", "LimitedAvailability", "OnlineOnly", "PreSale"]);
-// PreOrder/BackOrder are treated as out_of_stock: the tracker is about immediate
-// orderability, and a pre-order (restock pending) must not fire a "bestellbar" alert.
-const OUT_OF_STOCK = new Set(["OutOfStock", "SoldOut", "Discontinued", "InStoreOnly", "PreOrder", "BackOrder"]);
+// PreOrder/BackOrder map to pre_orderable: an order can be placed now, but the unit
+// isn't physically in stock yet (a future "Erwarteter Lagerzugang" date). It's a
+// display-only state — it must NOT fire a "bestellbar" restock alert.
+const PRE_ORDERABLE = new Set(["PreOrder", "BackOrder"]);
+const OUT_OF_STOCK = new Set(["OutOfStock", "SoldOut", "Discontinued", "InStoreOnly"]);
 
 export function mapMicrodataAvailability(name: string | undefined): StockStatus {
   if (!name) return "unknown";
   if (IN_STOCK.has(name)) return "in_stock";
+  if (PRE_ORDERABLE.has(name)) return "pre_orderable";
   if (OUT_OF_STOCK.has(name)) return "out_of_stock";
   return "unknown";
 }

@@ -17,8 +17,8 @@ describe("mapMicrodataAvailability", () => {
     ["LimitedAvailability", "in_stock"],
     ["OutOfStock", "out_of_stock"],
     ["SoldOut", "out_of_stock"],
-    ["PreOrder", "out_of_stock"], // pre-order is not immediate availability
-    ["BackOrder", "out_of_stock"],
+    ["PreOrder", "pre_orderable"], // orderable now, not yet in stock
+    ["BackOrder", "pre_orderable"],
     ["Frobnicated", "unknown"],
     [undefined, "unknown"],
   ])("%s -> %s", (name, expected) => {
@@ -36,8 +36,8 @@ describe("parseOnlineBatterien", () => {
     });
   });
 
-  it("maps a PreOrder offer to out_of_stock (keeps the price)", () => {
-    expect(parseOnlineBatterien(page("PreOrder"))).toMatchObject({ status: "out_of_stock", priceCents: 110671 });
+  it("maps a PreOrder offer to pre_orderable (keeps the price)", () => {
+    expect(parseOnlineBatterien(page("PreOrder"))).toMatchObject({ status: "pre_orderable", priceCents: 110671 });
   });
 
   it("throws when the Offer microdata is absent (blocked / layout change)", () => {

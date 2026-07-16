@@ -20,7 +20,7 @@ function result(overrides: Partial<RetailerResult>): RetailerResult {
 }
 
 describe("computeDiff — online offers", () => {
-  const offer = (status: "in_stock" | "out_of_stock" | "unknown", priceCents: number | null = 89999) => ({
+  const offer = (status: "in_stock" | "out_of_stock" | "pre_orderable" | "unknown", priceCents: number | null = 89999) => ({
     variant: "portasplit" as const,
     url: "https://example.at/p",
     priceCents,
@@ -65,6 +65,27 @@ describe("computeDiff — online offers", () => {
   it("in_stock -> unknown emits nothing", () => {
     const p = prev({ offers: new Map([["portasplit", { status: "in_stock", priceCents: 89999 }]]) });
     expect(computeDiff(p, result({ offers: [offer("unknown")] }))).toEqual([]);
+  });
+
+  it("pre_orderable -> in_stock emits online_restock (a real restock still alerts)", () => {
+    const p = prev({ offers: new Map([["portasplit", { status: "pre_orderable", priceCents: 89999 }]]) });
+    const events = computeDiff(p, result({ offers: [offer("in_stock")] }));
+    expect(events).toEqual([{ type: "online_restock", retailerSlug: "obi", variantSlug: "portasplit", priceCents: 89999 }]);
+  });
+
+  it("out_of_stock -> pre_orderable emits nothing (never fires an alert)", () => {
+    const p = prev({ offers: new Map([["portasplit", { status: "out_of_stock", priceCents: 89999 }]]) });
+    expect(computeDiff(p, result({ offers: [offer("pre_orderable")] }))).toEqual([]);
+  });
+
+  it("unseen offer arriving pre_orderable emits nothing", () => {
+    expect(computeDiff(prev(), result({ offers: [offer("pre_orderable")] }))).toEqual([]);
+  });
+
+  it("in_stock -> pre_orderable emits online_soldout (feed only, no notification)", () => {
+    const p = prev({ offers: new Map([["portasplit", { status: "in_stock", priceCents: 89999 }]]) });
+    const events = computeDiff(p, result({ offers: [offer("pre_orderable")] }));
+    expect(events).toEqual([{ type: "online_soldout", retailerSlug: "obi", variantSlug: "portasplit", priceCents: 89999 }]);
   });
 });
 

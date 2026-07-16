@@ -5,6 +5,7 @@ import type { VariantStatus } from "./queries";
 const AVAILABILITY: Record<string, string> = {
   in_stock: "https://schema.org/InStock",
   out_of_stock: "https://schema.org/OutOfStock",
+  pre_orderable: "https://schema.org/PreOrder",
 };
 
 const euro = (cents: number) => (cents / 100).toFixed(2);

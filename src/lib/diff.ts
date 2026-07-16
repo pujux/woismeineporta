@@ -33,7 +33,9 @@ export function computeDiff(prev: PrevState, result: RetailerResult): StockEvent
 
     if (offer.status === "in_stock" && prevStatus !== "in_stock") {
       events.push({ type: "online_restock", ...base });
-    } else if (offer.status === "out_of_stock" && prevStatus === "in_stock") {
+    } else if ((offer.status === "out_of_stock" || offer.status === "pre_orderable") && prevStatus === "in_stock") {
+      // Leaving in_stock for out_of_stock OR pre_orderable is a sold-out (feed only, no
+      // notification). Going to "unknown" (a failed check) is deliberately not a sold-out.
       events.push({ type: "online_soldout", ...base });
     } else if (
       offer.status === "in_stock" &&

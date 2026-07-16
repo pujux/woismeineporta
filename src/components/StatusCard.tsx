@@ -11,6 +11,14 @@ const STATUS_META = {
     ctaClass: "font-semibold text-sky-600 dark:text-sky-400",
     priceClass: "text-lg font-bold text-slate-900 dark:text-slate-100",
   },
+  pre_orderable: {
+    label: "Vorbestellbar",
+    chip: "bg-amber-100 text-amber-800 ring-amber-600/20 dark:bg-amber-500/15 dark:text-amber-300 dark:ring-amber-500/30",
+    dot: "bg-amber-500",
+    cta: "Vorbestellen →",
+    ctaClass: "font-semibold text-amber-700 dark:text-amber-400",
+    priceClass: "text-lg font-bold text-slate-900 dark:text-slate-100",
+  },
   out_of_stock: {
     label: "Ausverkauft",
     chip: "bg-slate-100 text-slate-700 ring-slate-500/15 dark:bg-slate-800 dark:text-slate-300 dark:ring-slate-600/40",
