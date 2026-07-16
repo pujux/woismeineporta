@@ -15,6 +15,12 @@ function productUrl(asin: string): string {
   return `https://www.amazon.de/dp/${asin}`;
 }
 
+// When Amazon's own stock is gone, a third-party reseller can win the buy box (which
+// still renders an add-to-cart button) at a markup — e.g. ~€860 resellers or ~€1.800
+// "Collectible" listings, well above the ~€750 retail. Those must NOT fire a restock
+// alert, so a featured offer priced at/above this ceiling is treated as out_of_stock.
+const MAX_PRICE_CENTS = 120_000;
+
 // Amazon rate-challenges scrapers: after a few rapid requests it serves a CAPTCHA/
 // robot page instead of the PDP. We pace the per-ASIN fetches with jitter and retry
 // once (after a pause) when we detect a blocked page — no delays under test.
@@ -71,8 +77,14 @@ export function parseAmazon(html: string): { status: StockStatus; priceCents: nu
 
   // Buy-box price = first a-offscreen inside the core-price feature block.
   const region = html.match(/id="corePrice(?:Display_desktop)?_feature_div"[\s\S]{0,2500}/)?.[0] ?? "";
-  const price = region.match(/class="a-offscreen">([^<]+)</)?.[1];
-  return { status: "in_stock", priceCents: parseEuroCents(price) };
+  const priceCents = parseEuroCents(region.match(/class="a-offscreen">([^<]+)</)?.[1]);
+
+  // A featured offer at/above the ceiling is a reseller/collectible markup, not a real
+  // restock — report the observed price but as out_of_stock so no alert fires. A missing
+  // price (parser miss) stays in_stock: don't turn a rare genuine restock into a miss.
+  if (priceCents !== null && priceCents >= MAX_PRICE_CENTS) return { status: "out_of_stock", priceCents };
+
+  return { status: "in_stock", priceCents };
 }
 
 // amazon.at is a marginal storefront; Austrian shoppers use amazon.de. The product is

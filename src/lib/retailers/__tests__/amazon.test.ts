@@ -34,6 +34,18 @@ describe("parseAmazon", () => {
   it("throws on a blocked/CAPTCHA page (no productTitle) rather than reporting out_of_stock", () => {
     expect(() => parseAmazon("<html><body>Enter the characters you see below (robot check)</body></html>")).toThrow();
   });
+
+  it("rejects an above-ceiling featured offer (reseller/collectible markup) as out_of_stock", () => {
+    // A third-party reseller winning the buy box at €1.799 renders an add-to-cart button;
+    // it must NOT count as a real restock (retail is well under €1.200).
+    const page = `<span id="productTitle">Midea PortaSplit</span><div id="corePrice_feature_div"><span class="a-offscreen">1.799,00 €</span></div><input id="add-to-cart-button">`;
+    expect(parseAmazon(page)).toEqual({ status: "out_of_stock", priceCents: 179900 });
+  });
+
+  it("accepts a featured offer just under the €1.200 ceiling", () => {
+    const page = `<span id="productTitle">Midea PortaSplit</span><div id="corePrice_feature_div"><span class="a-offscreen">1.199,00 €</span></div><input id="add-to-cart-button">`;
+    expect(parseAmazon(page)).toEqual({ status: "in_stock", priceCents: 119900 });
+  });
 });
 
 describe("isBlockedPage", () => {
