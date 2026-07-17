@@ -34,7 +34,10 @@ export function SubscribePanel() {
   const [pushError, setPushError] = useState<string | null>(null);
 
   const [email, setEmail] = useState("");
-  const [emailState, setEmailState] = useState<"idle" | "sending" | "sent" | "error">("idle");
+  // "confirm" = new/unconfirmed address, a confirmation mail is on its way.
+  // "updated" = already-confirmed subscriber, prefs saved, NO mail (so we must not tell
+  // them to check their inbox — that's the confusing case this state fixes).
+  const [emailState, setEmailState] = useState<"idle" | "sending" | "confirm" | "updated" | "error">("idle");
 
   const isIos = typeof navigator !== "undefined" && /iPhone|iPad|iPod/.test(navigator.userAgent);
   const isStandalone = typeof window !== "undefined" && window.matchMedia("(display-mode: standalone)").matches;
@@ -128,7 +131,12 @@ export function SubscribePanel() {
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ email, ...prefs() }),
       });
-      setEmailState(res.ok ? "sent" : "error");
+      if (!res.ok) {
+        setEmailState("error");
+        return;
+      }
+      const data = (await res.json().catch(() => null)) as { result?: string } | null;
+      setEmailState(data?.result === "updated" ? "updated" : "confirm");
     } catch {
       setEmailState("error");
     }
@@ -261,10 +269,15 @@ export function SubscribePanel() {
             {emailState === "sending" ? "…" : "Aktivieren"}
           </button>
         </form>
-        {emailState === "sent" && (
+        {emailState === "confirm" && (
           <p className="mt-2 text-sm text-green-700 dark:text-green-400">
             Fast geschafft! Wir haben dir eine Bestätigungs-Mail geschickt — kurz bestätigen (auch im Spam-Ordner schauen), dann ist der Alarm scharf.
             ✓
+          </p>
+        )}
+        {emailState === "updated" && (
+          <p className="mt-2 text-sm text-green-700 dark:text-green-400">
+            Deine Einstellungen wurden aktualisiert. ✓ Dein Alarm läuft weiter — es kommt keine neue Bestätigungs-Mail.
           </p>
         )}
         {emailState === "error" && (

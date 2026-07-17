@@ -76,7 +76,7 @@ export async function createEmailSubscription(
   input: { email: string; variantSlugs: string[]; zip?: string; radiusKm?: number },
   send: SendFn = scalewaySend,
   now: number = Date.now(),
-): Promise<"created" | "resent" | "invalid"> {
+): Promise<"created" | "resent" | "updated" | "invalid"> {
   const email = input.email?.trim().toLowerCase();
   if (!email || !EMAIL_RE.test(email)) return "invalid";
   if (
@@ -99,10 +99,14 @@ export async function createEmailSubscription(
   const existing = await repo.findOneBy({ email });
 
   if (existing) {
-    // Already subscribed: just update preferences, never re-send a confirm mail.
+    // Already confirmed: just update preferences, never send a mail. Distinct "updated"
+    // outcome so the UI shows "settings updated" (no confirm mail is coming) instead of
+    // the misleading "check your inbox". This is the only case that reveals the address
+    // is a confirmed subscriber — an accepted, low-value leak for a public alert tool;
+    // new and unconfirmed addresses both map to "check your inbox" (indistinguishable).
     if (existing.confirmed) {
       await repo.update(existing.id, { variantSlugs, zip, radiusKm });
-      return "resent";
+      return "updated";
     }
     // Unconfirmed but a confirm mail went out recently: update prefs, don't
     // re-send (anti-bombing). The response is identical so we don't leak state.

@@ -45,14 +45,17 @@ describe("email subscriptions", () => {
     expect(await db.getRepository(EmailSubscriptionEntity).count()).toBe(1);
   });
 
-  it("never re-sends a confirmation to an already-confirmed address", async () => {
+  it("updates prefs for an already-confirmed address and returns 'updated' without sending", async () => {
+    // A confirmed subscriber editing prefs must NOT get a mail (anti-abuse) and the
+    // outcome must be distinguishable from a signup so the UI can say "prefs updated"
+    // instead of the misleading "check your email to confirm".
     await createEmailSubscription(db, { email: "a@b.at", variantSlugs: ["portasplit"] }, send, 1000);
     const row = await db.getRepository(EmailSubscriptionEntity).findOneByOrFail({ email: "a@b.at" });
     await confirmEmail(db, row.confirmToken);
     send.mockClear();
 
     const result = await createEmailSubscription(db, { email: "a@b.at", variantSlugs: ["portasplit", "portasplit-cool"] }, send, 9_999_999_999);
-    expect(result).toBe("resent");
+    expect(result).toBe("updated");
     expect(send).not.toHaveBeenCalled();
     const after = await db.getRepository(EmailSubscriptionEntity).findOneByOrFail({ email: "a@b.at" });
     expect(after.confirmed).toBe(true);
