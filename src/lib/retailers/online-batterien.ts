@@ -42,6 +42,10 @@ export function parseOnlineBatterien(html: string): OnlineOffer {
 export const onlineBatterienAdapter: RetailerAdapter = {
   slug: "online-batterien",
   tier: "slow",
+  // This dropship listing blips in/out (and its price swings wildly). Hold a status
+  // change for 10 min before committing it, so short blips don't churn the card or
+  // fire alerts. Genuine changes are delayed ~10–12 min, which is fine for this shop.
+  debounceMs: 10 * 60_000,
   async check(fetchFn) {
     const res = await politeFetch(URL, { headers: { Accept: "text/html", "Accept-Language": "de-AT,de;q=0.9" } }, fetchFn);
     return { retailerSlug: "online-batterien", offers: [parseOnlineBatterien(await res.text())], storeStock: null };

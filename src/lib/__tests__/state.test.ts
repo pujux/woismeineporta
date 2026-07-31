@@ -2,8 +2,8 @@ import { beforeEach, describe, expect, it } from "vitest";
 import { EventEntity, OfferEntity, StoreAvailabilityEntity, StoreEntity, type AppDb } from "@/db";
 import { createTestDb } from "@/db/test-utils";
 import { computeDiff } from "@/lib/diff";
-import { loadPrevState, markUnknown, persistResult } from "@/lib/state";
-import type { RetailerResult } from "@/lib/retailers/types";
+import { applyDebounce, loadPrevState, markUnknown, persistResult } from "@/lib/state";
+import type { RetailerAdapter, RetailerResult, StockStatus } from "@/lib/retailers/types";
 
 const RESULT: RetailerResult = {
   retailerSlug: "obi",
@@ -81,5 +81,67 @@ describe("state persistence", () => {
     const offer = await db.getRepository(OfferEntity).findOneByOrFail({ retailerSlug: "obi" });
     expect(offer.status).toBe("unknown");
     expect(offer.lastCheckedAt).toBe(2000);
+  });
+});
+
+describe("applyDebounce (hysteresis)", () => {
+  let db: AppDb;
+  const DEBOUNCE_MS = 10 * 60_000;
+
+  const obAdapter: RetailerAdapter = { slug: "online-batterien", tier: "slow", debounceMs: DEBOUNCE_MS, check: async () => ob("in_stock") };
+  const plainAdapter: RetailerAdapter = { slug: "obi", tier: "slow", check: async () => RESULT };
+
+  const ob = (status: StockStatus, priceCents = 119002): RetailerResult => ({
+    retailerSlug: "online-batterien",
+    offers: [{ variant: "portasplit", url: "https://online-batterien.at/p", priceCents, status, pickupNote: null }],
+    storeStock: null,
+  });
+  const offerRow = () => db.getRepository(OfferEntity).findOneByOrFail({ retailerSlug: "online-batterien" });
+  const seedInStock = () => persistResult(db, ob("in_stock"), [], 1000);
+
+  beforeEach(async () => {
+    db = await createTestDb();
+  });
+
+  it("is a no-op for an adapter without debounceMs (change passes through immediately)", async () => {
+    await persistResult(db, RESULT, [], 1000);
+    const changed = { ...RESULT, offers: [{ ...RESULT.offers[0], status: "out_of_stock" as const }] };
+    const eff = await applyDebounce(db, plainAdapter, changed, 2000);
+    expect(eff.offers[0].status).toBe("out_of_stock");
+    const row = await db.getRepository(OfferEntity).findOneByOrFail({ retailerSlug: "obi" });
+    expect(row.pendingStatus).toBeNull();
+  });
+
+  it("holds a short blip (status + price frozen) and never commits it", async () => {
+    await seedInStock();
+    // out_of_stock blip at a different price → held at the committed in_stock/price
+    const eff1 = await applyDebounce(db, obAdapter, ob("out_of_stock", 150000), 2000);
+    expect(eff1.offers[0].status).toBe("in_stock");
+    expect(eff1.offers[0].priceCents).toBe(119002);
+    const row1 = await offerRow();
+    expect(row1.pendingStatus).toBe("out_of_stock");
+    expect(row1.pendingSince).toBe(2000);
+
+    // blip ends within the window → pending cleared, still in_stock
+    const eff2 = await applyDebounce(db, obAdapter, ob("in_stock"), 2000 + 180_000);
+    expect(eff2.offers[0].status).toBe("in_stock");
+    expect((await offerRow()).pendingStatus).toBeNull();
+  });
+
+  it("promotes a change once it persists past the window", async () => {
+    await seedInStock();
+    const eff1 = await applyDebounce(db, obAdapter, ob("out_of_stock"), 2000);
+    expect(eff1.offers[0].status).toBe("in_stock"); // held
+
+    const eff2 = await applyDebounce(db, obAdapter, ob("out_of_stock"), 2000 + DEBOUNCE_MS);
+    expect(eff2.offers[0].status).toBe("out_of_stock"); // confirmed → promoted
+    expect((await offerRow()).pendingStatus).toBeNull();
+  });
+
+  it("does not delay recovery from unknown (post-outage)", async () => {
+    await seedInStock();
+    await markUnknown(db, "online-batterien", 1500);
+    const eff = await applyDebounce(db, obAdapter, ob("in_stock"), 2000);
+    expect(eff.offers[0].status).toBe("in_stock"); // immediate, not held
   });
 });

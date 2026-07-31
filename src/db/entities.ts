@@ -42,6 +42,9 @@ export interface Offer {
   pickupNote: string | null;
   lastCheckedAt: number;
   lastChangedAt: number;
+  /** Debounce (hysteresis): a differing reading awaiting confirmation, and when it was first seen. */
+  pendingStatus: StockStatusDb | null;
+  pendingSince: number;
 }
 export const OfferEntity = new EntitySchema<Offer>({
   name: "offer",
@@ -56,6 +59,8 @@ export const OfferEntity = new EntitySchema<Offer>({
     pickupNote: { type: "text", name: "pickup_note", nullable: true },
     lastCheckedAt: { type: "integer", name: "last_checked_at", default: 0 },
     lastChangedAt: { type: "integer", name: "last_changed_at", default: 0 },
+    pendingStatus: { type: "text", name: "pending_status", nullable: true },
+    pendingSince: { type: "integer", name: "pending_since", default: 0 },
   },
   indices: [
     {

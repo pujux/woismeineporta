@@ -39,5 +39,12 @@ export interface RetailerResult {
 export interface RetailerAdapter {
   slug: string;
   tier: "fast" | "slow";
+  /**
+   * Hysteresis window (ms). If set, an online-offer status change is held — not
+   * persisted, no events, no alerts — until the new reading has persisted for this
+   * long. Smooths a flaky/dropship listing that blips in and out. Omit for instant
+   * updates (the default for every well-behaved retailer).
+   */
+  debounceMs?: number;
   check(fetchFn: typeof fetch): Promise<RetailerResult>;
 }
