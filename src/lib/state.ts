@@ -1,46 +1,7 @@
 import { EventEntity, OfferEntity, StoreAvailabilityEntity, StoreEntity, type AppDb } from "@/db";
 import type { PrevState, StockEvent } from "./diff";
-import type { RetailerAdapter, RetailerResult } from "./retailers/types";
+import type { RetailerResult } from "./retailers/types";
 import type { StockStatusDb } from "@/db/entities";
-
-/**
- * Hysteresis for a flaky/dropship retailer (adapter.debounceMs set): hold an online-offer
- * status change until the new reading has persisted for the window, so short blips don't
- * flip the committed status or fire events/alerts. Returns the *effective* result (raw
- * status/price frozen to the committed value while a change is still unconfirmed) and
- * writes the pending-reading bookkeeping onto the offer row. No-op when debounceMs is unset.
- */
-export async function applyDebounce(db: AppDb, adapter: RetailerAdapter, result: RetailerResult, now: number): Promise<RetailerResult> {
-  if (!adapter.debounceMs) return result;
-  const repo = db.getRepository(OfferEntity);
-
-  const offers = await Promise.all(
-    result.offers.map(async (offer) => {
-      const row = await repo.findOneBy({ retailerSlug: result.retailerSlug, variantSlug: offer.variant });
-      const committed = row?.status ?? "unknown";
-
-      // Stable, first-ever sighting, or recovery from an outage (unknown) → accept the
-      // reading immediately and clear any pending bookkeeping.
-      if (!row || offer.status === committed || committed === "unknown") {
-        if (row?.pendingStatus != null) await repo.update(row.id, { pendingStatus: null, pendingSince: 0 });
-        return offer;
-      }
-
-      // The reading differs from the committed status: confirm it persisted for the window.
-      if (row.pendingStatus === offer.status && now - row.pendingSince >= adapter.debounceMs!) {
-        await repo.update(row.id, { pendingStatus: null, pendingSince: 0 }); // promote → downstream commits it
-        return offer;
-      }
-      // Start or keep waiting: hold the committed status + price (freeze the card, emit nothing).
-      if (row.pendingStatus !== offer.status) {
-        await repo.update(row.id, { pendingStatus: offer.status as StockStatusDb, pendingSince: now });
-      }
-      return { ...offer, status: committed, priceCents: row.priceCents };
-    }),
-  );
-
-  return { ...result, offers };
-}
 
 export async function loadPrevState(db: AppDb, retailerSlug: string): Promise<PrevState> {
   const offers = await db.getRepository(OfferEntity).findBy({ retailerSlug });

@@ -13,7 +13,7 @@ accessibility statements refer to plain Node `fetch` with browser-like headers
 | Tepto | ✓ PDP JSON-LD (base variant only) | — | works |
 | BAUHAUS | ✓ api.bauhaus `product-stock` (no warehouse) | ✓ 23 AT Fachcentren, per-store availability | everything (status, stores, price) via `api.bauhaus` — not Cloudflare; PDP no longer required |
 | Amazon | ✓ featured offer (buy box) only | — | PDP fetch works via impit from residential; **datacenter IPs may get CAPTCHA'd** |
-| Online-Batterien | ✓ schema.org microdata | — | plain HTML, works |
+| Online-Batterien | — | — | **dropped 2026-07: overpriced dropship listing** (€1.106→€1.499 vs ~€800 retail) with availability that blipped in/out; schema.org microdata had worked (`/17837/…`) |
 | PV-24 | — | — | **dropped 2026-07: pv-24.at became host-unreachable from the server** (repeated health alerts); WooCommerce Store API had worked (`/wp-json/wc/store/v1/products/33944`) |
 | Hornbach | — | — | **dropped: does not sell the PortaSplit in Austria** (0 search results on hornbach.at) |
 | hagebau | — | — | **dropped: does not sell the PortaSplit** (Midea category on hagebau.at lists other models, no PortaSplit) |
@@ -65,12 +65,6 @@ accessibility statements refer to plain Node `fetch` with browser-like headers
 - **Block guard:** a CAPTCHA/robot-check page has no `id="productTitle"` → the adapter throws (poller backs off / markUnknown) rather than reporting a false `out_of_stock`.
 - **Server-side access caveat:** PDPs fetch fine via impit from a residential IP, but Amazon aggressively CAPTCHAs **datacenter** IPs. If prod gets blocked, it likely needs WARP/a residential proxy (like MediaMarkt). Amazon has never stocked the PortaSplit first-party, so this mostly sits at `out_of_stock` — but it will catch a genuine featured offer if one ever appears.
 
-## Online-Batterien (online-batterien.at)
-
-- AKKU SYS GmbH (Wolfurt, Vorarlberg), a battery-tech shop; sells the 12.000 BTU PortaSplit (heat+cool), free shipping to AT; no Cool variant. ~€1.106,71.
-- **Gambio** shop with no public JSON API (its REST API is auth-gated), but the PDP carries a schema.org **Offer as inline microdata**: `<meta itemprop="price" content="1106.71">` + `<link itemprop="availability" href="…/schema.org/…">`. Parsed via regex in `src/lib/retailers/online-batterien.ts`. Throws if the Offer microdata is absent (blocked / layout change).
-- **`PreOrder`/`BackOrder` → `pre_orderable` (2026-07-16).** The shop emits `PreOrder` with an "Erwarteter Lagerzugang \<date\>" (e.g. observed 30 July 2026) while keeping the add-to-cart button live: orderable now, but not physically in stock. Mapped to the display-only `pre_orderable` status (shown as "Vorbestellbar", amber card) — **not** `out_of_stock` and **not** `in_stock`. It never fires an alert; only a real transition to `in_stock` does. `pre_orderable` was added to `StockStatus`/`StockStatusDb`, `diff.ts` (a `→ pre_orderable` never restocks; `in_stock → pre_orderable` is a feed-only sold-out), `StatusCard.tsx`, and `seo.ts` (`schema.org/PreOrder`).
-
 ## Fixtures (`src/lib/retailers/__fixtures__/`)
 
 - `obi-stores.json` — real store directory (79 stores)
@@ -82,4 +76,4 @@ accessibility statements refer to plain Node `fetch` with browser-like headers
 - `bauhaus-pdp-portasplit-synthetic.html` — minimal HTML wrapping the real JSON-LD
 - `amazon-pdp-{instock,oos}-synthetic.html` — minimal HTML with the parser-relevant markers (add-to-cart / core price / scalper offer)
 
-Variant coverage per retailer: OBI both; MediaMarkt both; Tepto base only; Bauhaus base only; Amazon both; Online-Batterien base only.
+Variant coverage per retailer: OBI both; MediaMarkt both; Tepto base only; Bauhaus base only; Amazon both.

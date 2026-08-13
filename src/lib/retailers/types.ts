@@ -1,7 +1,4 @@
-// "pre_orderable": buyable now (an order can be placed) but not physically in stock —
-// e.g. a shop's schema.org PreOrder/BackOrder with a future expected-arrival date. It is
-// deliberately NOT "in_stock" and never fires a restock alert; it's a display-only state.
-export type StockStatus = "in_stock" | "out_of_stock" | "pre_orderable" | "unknown";
+export type StockStatus = "in_stock" | "out_of_stock" | "unknown";
 export type VariantSlug = "portasplit" | "portasplit-cool";
 
 export interface OnlineOffer {
@@ -39,12 +36,5 @@ export interface RetailerResult {
 export interface RetailerAdapter {
   slug: string;
   tier: "fast" | "slow";
-  /**
-   * Hysteresis window (ms). If set, an online-offer status change is held — not
-   * persisted, no events, no alerts — until the new reading has persisted for this
-   * long. Smooths a flaky/dropship listing that blips in and out. Omit for instant
-   * updates (the default for every well-behaved retailer).
-   */
-  debounceMs?: number;
   check(fetchFn: typeof fetch): Promise<RetailerResult>;
 }

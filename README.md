@@ -39,7 +39,6 @@ auf einem Volume — keine weiteren Dienste (kein Redis, keine DB, kein Headless
 | MediaMarkt | ✓                  | nur Sammelsignal („in einzelnen Märkten abholbar")   |
 | Tepto      | ✓ (nur PortaSplit) | —                                                    |
 | Amazon     | ✓ (nur Featured Offer / Buy Box) | —                                      |
-| Online-Batterien | ✓ (nur PortaSplit) | —                                              |
 
 Amazon.de führt beide Varianten, hat sie aber selten selbst am Lager — meist nur überteuerte
 Drittanbieter („Collectible – Like New", ~€1.800). Als verfügbar zählt daher **nur das Featured
@@ -48,12 +47,6 @@ Alarme. Weil aber auch ein Drittanbieter die Buy Box gewinnen kann, gilt zusätz
 **Preisobergrenze (€1.200)**: ein Featured Offer darüber wird als `out_of_stock` gewertet (kein
 echter Restock, sondern ein Aufschlag). Kommt der Server-IP eine CAPTCHA-Seite zurück, meldet
 der Adapter `unknown` statt falscher Verfügbarkeit.
-
-Online-Batterien ist ein kleinerer österreichischer Shop, der nur die 12.000-BTU-Variante
-führt (kein Bot-Schutz): Status + Preis kommen aus schema.org-Microdata auf der Produktseite.
-Ein `PreOrder`/`BackOrder`-Angebot (bestellbar, aber noch nicht am Lager — mit künftigem
-Liefertermin) wird als eigener Status **`pre_orderable`** geführt und auf der Seite als
-„Vorbestellbar" angezeigt; er löst **keinen** Alarm aus (nur ein echter `in_stock`-Restock tut das).
 
 BAUHAUS und MediaMarkt sind Cloudflare-geschützt. Bei BAUHAUS kommen **Online-Status,
 Filialbestand und Preis** ohne Headless-Browser über die öffentliche `api.bauhaus`

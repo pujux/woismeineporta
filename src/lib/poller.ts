@@ -9,7 +9,7 @@ import { AdapterHttpError } from "./retailers/fetch";
 import { impitFetch } from "./retailers/impit-fetch";
 import { adapters } from "./retailers/registry";
 import type { RetailerAdapter } from "./retailers/types";
-import { applyDebounce, loadPrevState, markUnknown, persistResult } from "./state";
+import { loadPrevState, markUnknown, persistResult } from "./state";
 
 export interface TickSummary {
   ran: string[];
@@ -119,8 +119,7 @@ export async function runTick(db: AppDb, opts: TickOptions): Promise<TickSummary
 
     st.lastRunAt = now;
     try {
-      // Debounce (hysteresis) runs before diff/persist so a held blip produces no events.
-      const result = await applyDebounce(db, adapter, await adapter.check(fetchFn), now);
+      const result = await adapter.check(fetchFn);
       const events = computeDiff(await loadPrevState(db, adapter.slug), result);
       await persistResult(db, result, events, now);
       await notify(db, events, now);

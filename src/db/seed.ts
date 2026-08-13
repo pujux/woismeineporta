@@ -8,7 +8,6 @@ const RETAILERS = [
   { slug: "mediamarkt", name: "MediaMarkt", homepage: "https://www.mediamarkt.at" },
   { slug: "tepto", name: "Tepto", homepage: "https://www.tepto.at" },
   { slug: "amazon", name: "Amazon", homepage: "https://www.amazon.de" },
-  { slug: "online-batterien", name: "Online-Batterien", homepage: "https://online-batterien.at" },
 ];
 
 export async function seed(db: DataSource): Promise<void> {
@@ -74,11 +73,6 @@ export async function seed(db: DataSource): Promise<void> {
       retailerSlug: "amazon",
       variantSlug: "portasplit-cool",
       url: "https://www.amazon.de/dp/B0GXDWTFR5",
-    },
-    {
-      retailerSlug: "online-batterien",
-      variantSlug: "portasplit",
-      url: "https://online-batterien.at/17837/midea-portasplit-klimageraet-diy-mobile-split-klimaanlage-12k-eek-a/a",
     },
   ];
   await db

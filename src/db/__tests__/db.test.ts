@@ -6,11 +6,11 @@ describe("createDb", () => {
   it("seeds variants and retailers idempotently", async () => {
     const db = await createDb(":memory:");
     expect(await db.getRepository(VariantEntity).count()).toBe(2);
-    expect(await db.getRepository(RetailerEntity).count()).toBe(6);
+    expect(await db.getRepository(RetailerEntity).count()).toBe(5);
 
     await seed(db);
     expect(await db.getRepository(VariantEntity).count()).toBe(2);
-    expect(await db.getRepository(RetailerEntity).count()).toBe(6);
+    expect(await db.getRepository(RetailerEntity).count()).toBe(5);
     await db.destroy();
   });
 
@@ -32,7 +32,7 @@ describe("createDb", () => {
 
     expect(await db.getRepository(RetailerEntity).findOneBy({ slug: "pv24" })).toBeNull();
     expect(await db.getRepository(OfferEntity).findBy({ retailerSlug: "pv24" })).toHaveLength(0);
-    expect(await db.getRepository(RetailerEntity).count()).toBe(6); // only the known set remains
+    expect(await db.getRepository(RetailerEntity).count()).toBe(5); // only the known set remains
     await db.destroy();
   });
 
