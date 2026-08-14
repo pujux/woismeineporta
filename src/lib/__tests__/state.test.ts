@@ -13,7 +13,6 @@ const RESULT: RetailerResult = {
       url: "https://www.obi.at/p/3586245/x",
       priceCents: 89999,
       status: "in_stock",
-      pickupNote: null,
     },
   ],
   storeStock: [

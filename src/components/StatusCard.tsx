@@ -45,7 +45,6 @@ export function StatusCard({ offer, now }: Readonly<{ offer: VariantStatus["offe
           {meta.label}
         </span>
         <p className="mt-1.5 font-medium text-slate-900 dark:text-slate-100">{offer.retailerName}</p>
-        {offer.pickupNote && <p className="mt-0.5 text-xs text-sky-700 dark:text-sky-400">{offer.pickupNote}</p>}
         <p className="mt-auto pt-2 text-xs text-slate-500 dark:text-slate-400">
           {offer.lastCheckedAt === 0 ? (
             "noch nicht geprüft"

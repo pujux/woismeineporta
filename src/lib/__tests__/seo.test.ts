@@ -7,8 +7,8 @@ const statuses: VariantStatus[] = [
   {
     variant: { slug: "portasplit", name: "Midea PortaSplit", uvpCents: 119900 },
     offers: [
-      { retailerSlug: "obi", retailerName: "OBI", url: "https://obi.at/p", priceCents: 89999, status: "in_stock", pickupNote: null, lastCheckedAt: 0, lastChangedAt: 0 },
-      { retailerSlug: "bauhaus", retailerName: "BAUHAUS", url: "https://bauhaus.at/p", priceCents: 99900, status: "out_of_stock", pickupNote: null, lastCheckedAt: 0, lastChangedAt: 0 },
+      { retailerSlug: "obi", retailerName: "OBI", url: "https://obi.at/p", priceCents: 89999, status: "in_stock", lastCheckedAt: 0, lastChangedAt: 0 },
+      { retailerSlug: "bauhaus", retailerName: "BAUHAUS", url: "https://bauhaus.at/p", priceCents: 99900, status: "out_of_stock", lastCheckedAt: 0, lastChangedAt: 0 },
     ],
   },
   {

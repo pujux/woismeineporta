@@ -24,7 +24,17 @@ function extractScoped(html: string, typename: string, productId: string, field:
 }
 
 const ONLINE_IN_STOCK = new Set(["AVAILABLE", "BUYABLE", "IN_STOCK"]);
-const ONLINE_OUT_OF_STOCK = new Set(["TEMPORARILY_NOT_AVAILABLE", "PERMANENTLY_NOT_AVAILABLE", "NOT_AVAILABLE", "SOLD_OUT", "NOT_IN_ASSORTMENT"]);
+// MediaMarkt exposes both the verbose (…_NOT_AVAILABLE) and the shorter …_NA_INDEX
+// forms of the out-of-stock states, so both are recognised.
+const ONLINE_OUT_OF_STOCK = new Set([
+  "TEMPORARILY_NOT_AVAILABLE",
+  "PERMANENTLY_NOT_AVAILABLE",
+  "TEMPORARILY_NA_INDEX",
+  "PERMANENTLY_NA_INDEX",
+  "NOT_AVAILABLE",
+  "SOLD_OUT",
+  "NOT_IN_ASSORTMENT",
+]);
 
 function combineStatus(ld: StockStatus, onlineStatus: string | null): StockStatus {
   if (onlineStatus && ONLINE_IN_STOCK.has(onlineStatus)) return "in_stock";
@@ -33,17 +43,11 @@ function combineStatus(ld: StockStatus, onlineStatus: string | null): StockStatu
   return "unknown";
 }
 
-function pickupNote(displayStatus: string | null): string | null {
-  switch (displayStatus) {
-    case "AVAILABLE":
-      return "In Märkten abholbar";
-    case "PARTIALLY_AVAILABLE":
-      return "In einzelnen Märkten abholbar";
-    default:
-      return null;
-  }
-}
-
+// Note: no store-pickup signal. MediaMarkt's CofrPickupFeature.displayStatus is a
+// generic, stock-independent default (it stays PARTIALLY_AVAILABLE even for a
+// permanently sold-out item, because pickupStatus is always NO_STORE_SELECTED for us),
+// and the real per-store availability API is Cloudflare-blocked. Reporting it produced
+// false "in einzelnen Märkten abholbar" claims, so we don't.
 export const mediamarktAdapter: RetailerAdapter = {
   slug: "mediamarkt",
   tier: "slow",
@@ -55,13 +59,11 @@ export const mediamarktAdapter: RetailerAdapter = {
       const ld = parseProductLd(html);
       if (!ld) throw new Error(`mediamarkt: no product JSON-LD for ${product.productId}`);
       const onlineStatus = extractScoped(html, "CofrOnlineStatusFeature", product.productId, "onlineStatus");
-      const displayStatus = extractScoped(html, "CofrPickupFeature", product.productId, "displayStatus");
       offers.push({
         variant: product.variant,
         url: product.url,
         priceCents: ld.priceCents,
         status: combineStatus(ld.status, onlineStatus),
-        pickupNote: pickupNote(displayStatus),
       });
     }
     return { retailerSlug: "mediamarkt", offers, storeStock: null };

@@ -24,8 +24,9 @@ describe("mediamarktAdapter", () => {
     // fixture: JSON-LD OutOfStock, onlineStatus TEMPORARILY_NOT_AVAILABLE
     expect(base.status).toBe("out_of_stock");
     expect(base.priceCents).toBe(95900);
-    // fixture: pickup displayStatus PARTIALLY_AVAILABLE for 2075674
-    expect(base.pickupNote).toBe("In einzelnen Märkten abholbar");
+    // No pickup note is emitted at all (the store-pickup signal is unverifiable and
+    // misled — it stayed PARTIALLY_AVAILABLE even for permanently sold-out items).
+    expect(base).not.toHaveProperty("pickupNote");
 
     const cool = result.offers.find((o) => o.variant === "portasplit-cool")!;
     expect(cool.status).toBe("out_of_stock");

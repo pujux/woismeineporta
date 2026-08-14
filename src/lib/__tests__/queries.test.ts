@@ -14,7 +14,6 @@ describe("queries", () => {
       url: "https://www.obi.at/p/1",
       priceCents: 89999,
       status: "in_stock",
-      pickupNote: null,
       lastCheckedAt: 5000,
       lastChangedAt: 4000,
     });

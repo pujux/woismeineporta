@@ -39,7 +39,6 @@ export interface Offer {
   url: string;
   priceCents: number | null;
   status: StockStatusDb;
-  pickupNote: string | null;
   lastCheckedAt: number;
   lastChangedAt: number;
 }
@@ -53,7 +52,6 @@ export const OfferEntity = new EntitySchema<Offer>({
     url: { type: "text" },
     priceCents: { type: "integer", name: "price_cents", nullable: true },
     status: { type: "text", default: "unknown" },
-    pickupNote: { type: "text", name: "pickup_note", nullable: true },
     lastCheckedAt: { type: "integer", name: "last_checked_at", default: 0 },
     lastChangedAt: { type: "integer", name: "last_changed_at", default: 0 },
   },

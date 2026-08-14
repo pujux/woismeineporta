@@ -10,7 +10,6 @@ export interface VariantStatus {
     url: string;
     priceCents: number | null;
     status: StockStatus;
-    pickupNote: string | null;
     lastCheckedAt: number;
     lastChangedAt: number;
   }>;
@@ -35,7 +34,6 @@ export async function getVariantStatuses(db: AppDb): Promise<VariantStatus[]> {
         url: o.url,
         priceCents: o.priceCents,
         status: o.status,
-        pickupNote: o.pickupNote,
         lastCheckedAt: o.lastCheckedAt,
         lastChangedAt: o.lastChangedAt,
       }))

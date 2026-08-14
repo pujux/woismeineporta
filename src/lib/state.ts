@@ -36,7 +36,6 @@ export async function persistResult(db: AppDb, result: RetailerResult, events: S
       url: offer.url,
       priceCents: offer.priceCents,
       status: offer.status as StockStatusDb,
-      pickupNote: offer.pickupNote ?? null,
       lastCheckedAt: now,
       lastChangedAt: changed ? now : (existing?.lastChangedAt ?? now),
     };

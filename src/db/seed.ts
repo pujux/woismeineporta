@@ -84,7 +84,6 @@ export async function seed(db: DataSource): Promise<void> {
         ...o,
         priceCents: null,
         status: "unknown" as const,
-        pickupNote: null,
         lastCheckedAt: 0,
         lastChangedAt: 0,
       })),
