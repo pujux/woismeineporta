@@ -223,6 +223,22 @@ describe("runTick", () => {
     expect(ownerNotify.mock.calls[1][0]).toMatch(/ok|wieder/i);
   });
 
+  it("respects a per-adapter failuresBeforeUnknown before alerting (flaky adapter)", async () => {
+    const state = createPollerState();
+    const ownerNotify = vi.fn().mockResolvedValue(true);
+    const flaky = { ...fakeAdapter("amazon", "slow", async () => { throw new Error("captcha"); }), failuresBeforeUnknown: 5 };
+    const opts = { adapterList: [flaky], notify, ownerNotify, state, fastMs: 30_000, slowMs: 180_000 };
+
+    // 4 consecutive failures: below the raised threshold → still silent
+    for (let i = 1; i <= 4; i++) await runTick(db, { ...opts, now: i * 200_000 });
+    expect(ownerNotify).not.toHaveBeenCalled();
+
+    // 5th failure → first alert
+    await runTick(db, { ...opts, now: 5 * 200_000 });
+    expect(ownerNotify).toHaveBeenCalledOnce();
+    expect(ownerNotify.mock.calls[0][0]).toContain("amazon");
+  });
+
   it("re-alerts the owner after the re-alert window while still down", async () => {
     const state = createPollerState();
     const ownerNotify = vi.fn().mockResolvedValue(true);

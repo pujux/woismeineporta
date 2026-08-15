@@ -34,5 +34,11 @@ export interface RetailerResult {
 export interface RetailerAdapter {
   slug: string;
   tier: "fast" | "slow";
+  /**
+   * Consecutive failed checks before offers are marked unknown and the owner is
+   * alerted. Defaults to 3. Raise it for an inherently flaky adapter (e.g. Amazon,
+   * which is frequently CAPTCHA'd) so brief blips don't cause on/off health-alert churn.
+   */
+  failuresBeforeUnknown?: number;
   check(fetchFn: typeof fetch): Promise<RetailerResult>;
 }

@@ -93,6 +93,11 @@ export function parseAmazon(html: string): { status: StockStatus; priceCents: nu
 export const amazonAdapter: RetailerAdapter = {
   slug: "amazon",
   tier: "slow",
+  // Amazon is frequently CAPTCHA'd (a check just throws), and it recovers on its own a
+  // few polls later — with the default threshold of 3 that produced on/off health-alert
+  // churn. Require ~1h of continuous failure (20 × 180s slow-tier polls) before alerting,
+  // so only a genuine sustained outage pings the owner.
+  failuresBeforeUnknown: 20,
   async check(fetchFn) {
     const offers: OnlineOffer[] = [];
     let firstFetch = true;

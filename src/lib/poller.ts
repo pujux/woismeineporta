@@ -143,7 +143,7 @@ export async function runTick(db: AppDb, opts: TickOptions): Promise<TickSummary
       if (err instanceof AdapterHttpError && (err.status === 403 || err.status === 429)) {
         st.backoffMs = Math.min(st.backoffMs > 0 ? st.backoffMs * 2 : interval * 2, MAX_BACKOFF_MS);
       }
-      if (st.consecutiveFailures >= FAILURES_BEFORE_UNKNOWN) {
+      if (st.consecutiveFailures >= (adapter.failuresBeforeUnknown ?? FAILURES_BEFORE_UNKNOWN)) {
         await markUnknown(db, adapter.slug, now);
         // Email the owner once per outage, then at most every HEALTH_REALERT_MS.
         if (st.alertedAt === undefined || now - st.alertedAt >= HEALTH_REALERT_MS) {
