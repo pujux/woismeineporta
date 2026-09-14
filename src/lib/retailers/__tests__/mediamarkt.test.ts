@@ -39,4 +39,29 @@ describe("mediamarktAdapter", () => {
       status: 403,
     });
   });
+
+  it("falls back to onlineStatus when a discontinued product has dropped its JSON-LD", async () => {
+    // 2080923 lost its Product JSON-LD (permanently not available); onlineStatus is still
+    // present, so it must resolve to out_of_stock (price null) rather than throw.
+    const noLd = `<html><body>"CofrOnlineStatusFeature","id":"Media:de:2080923","onlineStatus":"PERMANENTLY_NOT_AVAILABLE"</body></html>`;
+    const result = await mediamarktAdapter.check(
+      fixtureFetch([
+        ["-2075674.html", fixture("mediamarkt-pdp-portasplit.html")],
+        ["-2080923.html", noLd],
+      ]),
+    );
+    const cool = result.offers.find((o) => o.variant === "portasplit-cool")!;
+    expect(cool.status).toBe("out_of_stock");
+    expect(cool.priceCents).toBeNull();
+    // the healthy variant still parses normally
+    expect(result.offers.find((o) => o.variant === "portasplit")!.status).toBe("out_of_stock");
+  });
+
+  it("throws when a product page has neither JSON-LD nor onlineStatus (blocked / layout change)", async () => {
+    const junk = fixtureFetch([
+      ["-2075674.html", "<html><body>nothing useful</body></html>"],
+      ["-2080923.html", "<html><body>nothing useful</body></html>"],
+    ]);
+    await expect(mediamarktAdapter.check(junk)).rejects.toThrow(/no product data/i);
+  });
 });

@@ -57,13 +57,18 @@ export const mediamarktAdapter: RetailerAdapter = {
       const res = await politeFetch(product.url, { headers: { Accept: "text/html" } }, fetchFn);
       const html = await res.text();
       const ld = parseProductLd(html);
-      if (!ld) throw new Error(`mediamarkt: no product JSON-LD for ${product.productId}`);
       const onlineStatus = extractScoped(html, "CofrOnlineStatusFeature", product.productId, "onlineStatus");
+      // A discontinued product can drop its Product JSON-LD while still exposing the
+      // authoritative onlineStatus, so JSON-LD is not required — but a page with neither
+      // signal is blocked or fully changed, so surface it (poller backs off / markUnknown).
+      if (!ld && !onlineStatus) {
+        throw new Error(`mediamarkt: no product data for ${product.productId} (blocked or layout change)`);
+      }
       offers.push({
         variant: product.variant,
         url: product.url,
-        priceCents: ld.priceCents,
-        status: combineStatus(ld.status, onlineStatus),
+        priceCents: ld?.priceCents ?? null,
+        status: combineStatus(ld?.status ?? "unknown", onlineStatus),
       });
     }
     return { retailerSlug: "mediamarkt", offers, storeStock: null };
