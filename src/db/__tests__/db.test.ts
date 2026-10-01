@@ -36,6 +36,28 @@ describe("createDb", () => {
     await db.destroy();
   });
 
+  it("reconciles away an offer for a tracked retailer whose variant is no longer tracked", async () => {
+    const db = await createDb(":memory:");
+    // Simulate a delisted product (e.g. MediaMarkt's Cool variant, HTTP 410) still lingering.
+    await db.getRepository(OfferEntity).insert({
+      retailerSlug: "mediamarkt",
+      variantSlug: "portasplit-cool",
+      url: "https://www.mediamarkt.at/de/product/gone-2080923.html",
+      priceCents: null,
+      status: "out_of_stock",
+      lastCheckedAt: 0,
+      lastChangedAt: 0,
+    });
+
+    await seed(db); // reconcile runs
+
+    // the MediaMarkt retailer stays (it still tracks the 12k variant), the stale offer goes
+    expect(await db.getRepository(RetailerEntity).findOneBy({ slug: "mediamarkt" })).not.toBeNull();
+    expect(await db.getRepository(OfferEntity).findBy({ retailerSlug: "mediamarkt", variantSlug: "portasplit-cool" })).toHaveLength(0);
+    expect(await db.getRepository(OfferEntity).findBy({ retailerSlug: "mediamarkt", variantSlug: "portasplit" })).toHaveLength(1);
+    await db.destroy();
+  });
+
   it("roundtrips an offer row", async () => {
     const db = await createDb(":memory:");
     const repo = db.getRepository(OfferEntity);

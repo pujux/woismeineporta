@@ -55,11 +55,6 @@ export async function seed(db: DataSource): Promise<void> {
       url: "https://www.mediamarkt.at/de/product/_midea-portasplit-mobile-klimaanlage-max-raumgrosse-42-m-eek-a-12000-btuh-weiss-2075674.html",
     },
     {
-      retailerSlug: "mediamarkt",
-      variantSlug: "portasplit-cool",
-      url: "https://www.mediamarkt.at/de/product/_midea-portasplit-cool-mobile-split-klimaanlage-8000btu-mobile-split-klimaanlage-a-28-m-8000-btuh-weiss-2080923.html",
-    },
-    {
       retailerSlug: "tepto",
       variantSlug: "portasplit",
       url: "https://www.tepto.at/Midea-Klimageraet-PortaSplit",
@@ -75,6 +70,14 @@ export async function seed(db: DataSource): Promise<void> {
       url: "https://www.amazon.de/dp/B0GXDWTFR5",
     },
   ];
+
+  // Reconcile at the (retailer, variant) level too: prune offers for a pair no longer
+  // tracked — e.g. a single product the retailer delisted — which the retailer-level
+  // reconcile above doesn't catch (the retailer itself is still tracked).
+  const knownPairs = new Set(knownOffers.map((o) => `${o.retailerSlug}:${o.variantSlug}`));
+  const staleOffers = (await db.getRepository(OfferEntity).find()).filter((o) => !knownPairs.has(`${o.retailerSlug}:${o.variantSlug}`));
+  if (staleOffers.length) await db.getRepository(OfferEntity).delete(staleOffers.map((o) => o.id));
+
   await db
     .createQueryBuilder()
     .insert()

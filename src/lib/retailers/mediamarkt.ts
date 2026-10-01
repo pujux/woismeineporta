@@ -2,16 +2,13 @@ import { politeFetch } from "./fetch";
 import { parseProductLd } from "./jsonld";
 import type { OnlineOffer, RetailerAdapter, StockStatus, VariantSlug } from "./types";
 
+// Only the 12k PortaSplit is tracked. MediaMarkt permanently delisted the Cool variant
+// (2080923 → HTTP 410 Gone), so it was removed; if they ever re-list it, re-add the URL.
 const PRODUCTS: Array<{ variant: VariantSlug; productId: string; url: string }> = [
   {
     variant: "portasplit",
     productId: "2075674",
     url: "https://www.mediamarkt.at/de/product/_midea-portasplit-mobile-klimaanlage-max-raumgrosse-42-m-eek-a-12000-btuh-weiss-2075674.html",
-  },
-  {
-    variant: "portasplit-cool",
-    productId: "2080923",
-    url: "https://www.mediamarkt.at/de/product/_midea-portasplit-cool-mobile-split-klimaanlage-8000btu-mobile-split-klimaanlage-a-28-m-8000-btuh-weiss-2080923.html",
   },
 ];
 
